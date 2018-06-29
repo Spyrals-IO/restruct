@@ -1,7 +1,7 @@
 package restruct.enumeratum.data.constraints
 
 import enumeratum.Enum
-import lib.core.data.constraints.Constraint
+import restruct.core.data.constraints.Constraint
 
 object EnumeratumConstraints {
   final case class EnumConstraint[E <: Enum[_]](enum: E) extends Constraint[String] {

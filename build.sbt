@@ -2,7 +2,7 @@
 lazy val core = (project in file("./core"))
   .settings(commonSettings: _*)
   .settings(
-    name := "algebra-core",
+    name := "restruct-core",
     addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"),
     libraryDependencies ++= Seq(
       Dependencies.cats.core,
@@ -10,44 +10,50 @@ lazy val core = (project in file("./core"))
       Dependencies.shapeless.shapeless
   ))
 
+lazy val examples = (project in file("./examples"))
+  .settings(commonSettings: _*)
+  .settings(name := "restruct-example")
+  .dependsOn(core, jsonSchema)
+
+
 lazy val jsonSchema = (project in file("./jsonSchema"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= playJsonDependencies)
-  .settings(name := "algebra-json-schema")
+  .settings(name := "restruct-json-schema")
   .dependsOn(core, writes)
 
 lazy val playJson = (project in file("./playJson"))
   .settings(commonSettings: _*)
-  .settings(name := "algebra-play-json")
+  .settings(name := "restruct-play-json")
   .aggregate(reads, writes, format)
 
 lazy val reads = (project in file("./playJson/reads"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= playJsonDependencies)
-  .settings(name := "algebra-play-json-reads")
+  .settings(name := "restruct-play-json-reads")
   .dependsOn(core)
 
 lazy val writes = (project in file("./playJson/writes"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= playJsonDependencies)
-  .settings(name := "algebra-play-json-writes")
+  .settings(name := "restruct-play-json-writes")
   .dependsOn(core)
 
 lazy val format = (project in file("./playJson/format"))
   .settings(commonSettings: _*)
-  .settings(name := "algebra-play-json-format")
+  .settings(name := "restruct-play-json-format")
   .dependsOn(core, writes, reads)
 
 lazy val refined = (project in file("./refined"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= refinedDependencies)
-  .settings(name := "algebra-refined-schema")
+  .settings(name := "restruct-refined-schema")
   .dependsOn(core)
 
 lazy val enumeratum = (project in file("./enumeratum"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= enumeratumDependencies)
-  .settings(name := "algebra-enumeratum-schema")
+  .settings(name := "restruct-enumeratum-schema")
   .dependsOn(core)
 
 

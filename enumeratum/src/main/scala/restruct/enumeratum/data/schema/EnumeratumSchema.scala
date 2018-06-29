@@ -1,9 +1,10 @@
 package restruct.enumeratum.data.schema
 
-import enumeratum.{ Enum, EnumEntry }
+import enumeratum.{Enum, EnumEntry}
 import cats.implicits._
 import lib.core.Program
-import lib.core.data.schema.SchemaAlgebra
+import restruct.core.Program
+import restruct.core.data.schema.SchemaAlgebra
 import restruct.enumeratum.data.constraints.EnumeratumConstraints.EnumConstraint
 
 import language.higherKinds
