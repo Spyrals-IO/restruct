@@ -1,3 +1,4 @@
+
 lazy val core = (project in file("./core"))
   .settings(commonSettings: _*)
   .settings(
@@ -6,8 +7,8 @@ lazy val core = (project in file("./core"))
     libraryDependencies ++= Seq(
       Dependencies.cats.core,
       Dependencies.test.scalaTest,
-      Dependencies.refined.refined,
-      Dependencies.enumeratum.enum
+      Dependencies.enumeratum.enum,
+      Dependencies.shapeless.shapeless
   ))
 
 lazy val jsonSchema = (project in file("./jsonSchema"))
@@ -38,12 +39,23 @@ lazy val format = (project in file("./playJson/format"))
   .settings(name := "algebra-play-json-format")
   .dependsOn(core, writes, reads)
 
+lazy val refined = (project in file("./Refined"))
+  .settings(commonSettings: _*)
+  .settings(libraryDependencies ++= refinedDependencies)
+  .settings(name := "algebra-refined-schema")
+  .dependsOn(core)
+
 lazy val commonSettings =
   Settings.scala.commonSettings ++
   scalariformCommonSettings
 
 lazy val playJsonDependencies = Seq(
   Dependencies.json.play
+)
+
+lazy val refinedDependencies = Seq(
+  Dependencies.refined.core,
+  Dependencies.cats.core
 )
 
 import scalariform.formatter.preferences._

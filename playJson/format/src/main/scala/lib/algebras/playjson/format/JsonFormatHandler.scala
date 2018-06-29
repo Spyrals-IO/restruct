@@ -12,7 +12,7 @@ object JsonFormatHandler {
   def run[T](program: Program[SchemaAlgebra, T]): Format[T] = program.run(Handler)
 
   private[this] val writesHandler = JsonWritesHandler.Handler
-  private[this] val readsHandler  = JsonReadsHandler.Handler
+  private[this] val readsHandler = JsonReadsHandler.Handler
 
   private[json] object Handler extends SchemaAlgebra[Format] {
     override def stringSchema: Format[String] =

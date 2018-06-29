@@ -1,9 +1,8 @@
 package lib.core.data.schema
 
 import cats.implicits._
-import eu.timepit.refined.api.Refined
 import lib.core.Program
-import lib.core.data.constraints.{ConstraintProvider, Constraints}
+import lib.core.data.constraints.Constraints
 import shapeless.labelled.FieldType
 import shapeless.{:+:, ::, CNil, Coproduct, Default, HList, HNil, Inl, Inr, LabelledGeneric, Lazy, Witness, labelled}
 
@@ -103,19 +102,6 @@ object SchemaProvider {
       (default: Option[List[VALUE]]) => new Program[SchemaAlgebra, FieldType[KEY, List[VALUE]]] {
         override def run[F[_]](implicit algebra: SchemaAlgebra[F]): F[FieldType[KEY, List[VALUE]]] =
           algebra.many(witness.value.name, valueSchema.run(algebra), default).imap(labelled.field[KEY].apply _)(identity)
-      }
-
-    implicit def refinedManyFieldSchemaProgram[KEY <: Symbol, VALUE, P](implicit
-      witness: Witness.Aux[KEY],
-      valueSchema: Program[SchemaAlgebra, VALUE],
-      constraintProvider: ConstraintProvider[Refined[List[VALUE], P]],
-    ): SchemaProvider.WithDefault[FieldType[KEY, Refined[List[VALUE], P]], Option[Refined[List[VALUE], P]]] =
-      (default: Option[Refined[List[VALUE], P]]) => new Program[SchemaAlgebra, FieldType[KEY, Refined[List[VALUE], P]]] {
-        override def run[F[_]](implicit algebra: SchemaAlgebra[F]): F[FieldType[KEY, Refined[List[VALUE], P]]] =
-          algebra.verifying(
-            algebra.many(witness.value.name, valueSchema.run(algebra), default.map(_.value)).imap(Refined.unsafeApply[List[VALUE], P])(_.value),
-            constraintProvider()
-          ).imap(labelled.field[KEY].apply _)(identity)
       }
 
     implicit def optionalFieldSchemaProgram[KEY <: Symbol, VALUE](implicit

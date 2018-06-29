@@ -1,7 +1,7 @@
 package lib.core.data.schema
 
 import cats.implicits._
-import enumeratum.{Enum, EnumEntry}
+import enumeratum.{ Enum, EnumEntry }
 import lib.core.Program
 import lib.core.data.constraints.Constraints
 

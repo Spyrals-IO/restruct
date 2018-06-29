@@ -13,7 +13,7 @@ object Dependencies {
 
   object refined {
     val version = "0.9.0"
-    val refined = "eu.timepit" %% "refined" % version
+    val core = "eu.timepit" %% "refined" % version
   }
 
   object test {
@@ -24,5 +24,10 @@ object Dependencies {
   object json {
     val version = "2.6.7"
     val play = "com.typesafe.play" %% "play-json" % version
+  }
+
+  object shapeless {
+    val version = "2.3.3"
+    val shapeless = "com.chuusai" %% "shapeless" % version
   }
 }

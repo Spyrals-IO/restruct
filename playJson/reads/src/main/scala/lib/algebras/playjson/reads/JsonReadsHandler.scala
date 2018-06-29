@@ -3,7 +3,7 @@ package lib.algebras.playjson.reads
 import lib.core.Program
 import lib.core.data.constraints.Constraint
 import lib.core.data.schema.SchemaAlgebra
-import play.api.libs.json.{JsPath, JsonValidationError, Reads}
+import play.api.libs.json.{ JsPath, JsonValidationError, Reads }
 import play.api.libs.functional.syntax._
 
 import scala.collection.generic.CanBuildFrom

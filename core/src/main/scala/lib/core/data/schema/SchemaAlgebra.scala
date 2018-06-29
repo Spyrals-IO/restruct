@@ -1,10 +1,8 @@
 package lib.core.data.schema
 
-import cats.{Invariant, Semigroupal}
-import cats.implicits._
-import eu.timepit.refined.api.Refined
+import cats.{ Invariant, Semigroupal }
 import lib.core.Program
-import lib.core.data.constraints.{Constraint, ConstraintProvider}
+import lib.core.data.constraints.Constraint
 
 import scala.language.higherKinds
 
@@ -48,18 +46,6 @@ object SchemaAlgebra {
 
   implicit val booleanSchema: Program[SchemaAlgebra, Boolean] = new Program[SchemaAlgebra, Boolean] {
     override def run[F[_]](implicit algebra: SchemaAlgebra[F]): F[Boolean] = algebra.booleanSchema
-  }
-
-  //TODO externalize
-  implicit def refinedSchema[T, P](implicit
-    schemaProgram: Program[SchemaAlgebra, T],
-    constraintProvider: ConstraintProvider[Refined[T, P]]
-  ): Program[SchemaAlgebra, Refined[T, P]] = new Program[SchemaAlgebra, Refined[T, P]] {
-    override def run[F[_]](implicit algebra: SchemaAlgebra[F]): F[Refined[T, P]] =
-      algebra.verifying(
-        schemaProgram.run(algebra).imap(Refined.unsafeApply[T, P])(_.value),
-        constraintProvider()
-      )
   }
 
   implicit val schemaAlgebraTermSemigroupal: Semigroupal[Program[SchemaAlgebra, ?]] = new Semigroupal[Program[SchemaAlgebra, ?]] {

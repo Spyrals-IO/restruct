@@ -1,6 +1,6 @@
 package lib.core.data.schema
 
-import enumeratum.{Enum, EnumEntry}
+import enumeratum.{ Enum, EnumEntry }
 import lib.core.Program
 
 trait SchemaEnum[E <: EnumEntry] { self: Enum[E] =>
