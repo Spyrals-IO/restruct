@@ -7,7 +7,6 @@ lazy val core = (project in file("./core"))
     libraryDependencies ++= Seq(
       Dependencies.cats.core,
       Dependencies.test.scalaTest,
-      Dependencies.enumeratum.enum,
       Dependencies.shapeless.shapeless
   ))
 
@@ -39,11 +38,18 @@ lazy val format = (project in file("./playJson/format"))
   .settings(name := "algebra-play-json-format")
   .dependsOn(core, writes, reads)
 
-lazy val refined = (project in file("./Refined"))
+lazy val refined = (project in file("./refined"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= refinedDependencies)
   .settings(name := "algebra-refined-schema")
   .dependsOn(core)
+
+lazy val enumeratum = (project in file("./enumeratum"))
+  .settings(commonSettings: _*)
+  .settings(libraryDependencies ++= enumeratumDependencies)
+  .settings(name := "algebra-enumeratum-schema")
+  .dependsOn(core)
+
 
 lazy val commonSettings =
   Settings.scala.commonSettings ++
@@ -55,6 +61,11 @@ lazy val playJsonDependencies = Seq(
 
 lazy val refinedDependencies = Seq(
   Dependencies.refined.core,
+  Dependencies.cats.core
+)
+
+lazy val enumeratumDependencies = Seq(
+  Dependencies.enumeratum.enum,
   Dependencies.cats.core
 )
 
