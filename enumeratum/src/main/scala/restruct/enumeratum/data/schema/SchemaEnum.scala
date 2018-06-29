@@ -7,4 +7,3 @@ import lib.core.data.schema.SchemaAlgebra
 trait SchemaEnum[E <: EnumEntry] { self: Enum[E] =>
   implicit val schema: Program[SchemaAlgebra, E] = EnumeratumSchema.enum(self)
 }
-
