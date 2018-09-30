@@ -1,14 +1,9 @@
 
 lazy val core = (project in file("./core"))
   .settings(commonSettings: _*)
-  .settings(
-    name := "restruct-core",
-    addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"),
-    libraryDependencies ++= Seq(
-      Dependencies.cats.core,
-      Dependencies.test.scalaTest,
-      Dependencies.shapeless.shapeless
-  ))
+  .settings(addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"))
+  .settings(libraryDependencies ++= coreDependencies)
+  .settings(name := "restruct-core")
 
 lazy val examples = (project in file("./examples"))
   .settings(commonSettings: _*)
@@ -56,10 +51,47 @@ lazy val enumeratum = (project in file("./enumeratum"))
   .settings(name := "restruct-enumeratum-schema")
   .dependsOn(core)
 
+lazy val bson = (project in file("./bson"))
+  .settings(commonSettings: _*)
+  .settings(name := "restruct-bson-schema")
+  .aggregate(bsonReader, bsonWriter, bsonHandler)
+
+lazy val bsonReader = (project in file("./bson/reader"))
+  .settings(commonSettings: _*)
+  .settings(libraryDependencies ++= bsonDependencies)
+  .settings(addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"))
+  .settings(name := "restruct-bson-reader-schema")
+  .dependsOn(core)
+
+lazy val bsonWriter = (project in file("./bson/writer"))
+  .settings(commonSettings: _*)
+  .settings(libraryDependencies ++= bsonDependencies)
+  .settings(addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"))
+  .settings(name := "restruct-bson-writer-schema")
+  .dependsOn(core)
+
+lazy val bsonHandler = (project in file("./bson/handler"))
+  .settings(commonSettings: _*)
+  .settings(libraryDependencies ++= bsonDependencies)
+  .settings(name := "restruct-bson-handler-schema")
+  .dependsOn(core, bsonReader, bsonWriter)
+
+lazy val urlEncode = (project in file("./urlEncode"))
+  .settings(commonSettings: _*)
+  .settings(libraryDependencies ++= urlEncodeDependencies)
+  .settings(name := "restruct-url-encode-schema")
+  .dependsOn(core)
+
 
 lazy val commonSettings =
   Settings.scala.commonSettings ++
   scalariformCommonSettings
+
+lazy val coreDependencies = Seq(
+  Dependencies.cats.core,
+  Dependencies.test.scalaTest,
+  Dependencies.shapeless.shapeless
+)
 
 lazy val playJsonDependencies = Seq(
   Dependencies.json.play
@@ -72,6 +104,15 @@ lazy val refinedDependencies = Seq(
 
 lazy val enumeratumDependencies = Seq(
   Dependencies.enumeratum.enum,
+  Dependencies.cats.core
+)
+
+lazy val bsonDependencies = Seq(
+  Dependencies.mongo.reactive,
+  Dependencies.cats.core
+)
+
+lazy val urlEncodeDependencies = Seq(
   Dependencies.cats.core
 )
 
