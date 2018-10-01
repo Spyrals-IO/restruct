@@ -13,6 +13,7 @@ object Settings {
         "-unchecked",
         "-feature",
         "-Ywarn-value-discard",
+        "-Ywarn-unused",
         "-Ypartial-unification",
         "-Yliteral-types",
         "-Ywarn-infer-any",

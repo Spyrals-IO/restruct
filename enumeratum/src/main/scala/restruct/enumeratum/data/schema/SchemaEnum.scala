@@ -1,10 +1,9 @@
 package restruct.enumeratum.data.schema
 
-import enumeratum.{Enum, EnumEntry}
-import lib.core.Program
+import enumeratum.{ Enum, EnumEntry }
 import restruct.core.Program
-import restruct.core.data.schema.SchemaAlgebra
+import restruct.core.data.schema.ComplexSchemaAlgebra
 
 trait SchemaEnum[E <: EnumEntry] { self: Enum[E] =>
-  implicit val schema: Program[SchemaAlgebra, E] = EnumeratumSchema.enum(self)
+  implicit val schema: Program[ComplexSchemaAlgebra, E] = EnumeratumSchema.enum(self)
 }

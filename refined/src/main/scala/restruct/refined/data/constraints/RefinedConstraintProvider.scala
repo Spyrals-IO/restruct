@@ -1,12 +1,11 @@
 package restruct.refined.data.constraints
 
-import lib.core.data.constraints.Constraint
 import shapeless.Witness
-import eu.timepit.refined.api.{Refined, Validate}
+import eu.timepit.refined.api.{ Refined, Validate }
 import eu.timepit.refined.collection.MinSize
-import eu.timepit.refined.numeric.{Greater, GreaterEqual, Interval}
+import eu.timepit.refined.numeric.{ Greater, GreaterEqual, Interval }
 import eu.timepit.refined.string.MatchesRegex
-import restruct.core.data.constraints.{Constraint, ConstraintProvider}
+import restruct.core.data.constraints.{ Constraint, ConstraintProvider }
 
 object RefinedConstraintProvider {
   //TODO add all Refined type base constraint
