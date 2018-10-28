@@ -1,7 +1,11 @@
 package restruct.algebras.json.playjson.reads
 
+import java.math.BigInteger
+
 import play.api.libs.json._
 import restruct.core.data.schema.SimpleSchemaAlgebra
+
+import scala.util.control.Exception
 
 private[playjson] trait SimpleJsonReaderInterpreter extends SimpleSchemaAlgebra[Reads] {
   override def charSchema: Reads[Char] = {
@@ -30,8 +34,17 @@ private[playjson] trait SimpleJsonReaderInterpreter extends SimpleSchemaAlgebra[
   override def longSchema: Reads[Long] =
     Reads.LongReads
 
-  override def bigIntSchema: Reads[BigInt] =
-    Reads.bigDecReads.map(_.toBigInt())
+  override def bigIntSchema: Reads[BigInt] = {
+    case JsString(s) =>
+      Exception.catching(classOf[NumberFormatException])
+        .opt(JsSuccess(BigInt(new BigInteger(s))))
+        .getOrElse(JsError(JsonValidationError("error.expected.numberformatexception")))
+    case JsNumber(d) =>
+      Exception.catching(classOf[ArithmeticException])
+        .opt(JsSuccess(BigInt(d.underlying.toBigIntegerExact)))
+        .getOrElse(JsError(JsonValidationError("error.expected.numberformatexception")))
+    case _ => JsError(JsonValidationError("error.expected.jsnumberorjsstring"))
+  }
 
   override def booleanSchema: Reads[Boolean] =
     Reads.BooleanReads

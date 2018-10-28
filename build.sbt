@@ -5,12 +5,6 @@ lazy val core = (project in file("./core"))
   .settings(libraryDependencies ++= coreDependencies)
   .settings(name := "restruct-core")
 
-lazy val examples = (project in file("./examples"))
-  .settings(commonSettings: _*)
-  .settings(name := "restruct-example")
-  .dependsOn(core, jsonSchema)
-
-
 lazy val jsonSchema = (project in file("./jsonSchema"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= playJsonDependencies)
@@ -81,6 +75,11 @@ lazy val urlEncode = (project in file("./urlEncode"))
   .settings(libraryDependencies ++= urlEncodeDependencies)
   .settings(name := "restruct-url-encode-schema")
   .dependsOn(core)
+
+lazy val examples = (project in file("./examples"))
+  .settings(commonSettings: _*)
+  .settings(name := "restruct-examples")
+  .dependsOn(core, format)
 
 
 lazy val commonSettings =
