@@ -1,6 +1,6 @@
 package restruct.examples
 
-import play.api.libs.json.{ Json, Reads }
+import play.api.libs.json.{Json, Reads}
 import restruct.algebras.json.playjson.reads.JsonReaderInterpreter
 import restruct.examples.SyntaxExample.BankAccount.reads
 import restruct.reader.Reader
@@ -35,6 +35,7 @@ object SyntaxExample extends App {
         |  firstName:
         |}
       """.stripMargin
+
   }
 
   final case class BankAccount(
@@ -43,7 +44,7 @@ object SyntaxExample extends App {
 
   object BankAccount {
     import restruct.reader.Syntax._
-    implicit lazy val schema: Reader[BankAccount] = Reader.is(
+    implicit lazy val schema: Reader[BankAccount] = Reader is (
       "amount".as(bigInt)
     )
 
