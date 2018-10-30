@@ -1,11 +1,12 @@
 package restruct.reader
 
-import cats.{ Invariant, Semigroupal }
+import cats.{Invariant, Semigroupal}
 import restruct.core.Program
 import restruct.core.data.constraints.Constraint
 import restruct.core.data.schema.ComplexSchemaAlgebra
-import restruct.reader.Syntax.{ FieldBuilder1, FieldBuilder2, FieldBuilder3, FieldBuilder4, FieldBuilder5 }
-import shapeless.{ ::, Generic, HNil }
+import restruct.reader.Syntax.{FieldBuilder1, FieldBuilder2, FieldBuilder3, FieldBuilder4, FieldBuilder5, Symboled}
+import shapeless.labelled.FieldType
+import shapeless.{::, HNil, LabelledGeneric}
 
 import scala.language.higherKinds
 
@@ -63,37 +64,37 @@ object Reader {
     override val default: Option[A] = Some(defaultA)
   }
 
-  def is[TYPE <: Product, FIELD_1](builder: FieldBuilder1[FIELD_1])(implicit
+  def is[TYPE <: Product, KEY_1, FIELD_1](builder: FieldBuilder1[KEY_1, FIELD_1])(implicit
     invariant: Invariant[Program[ComplexSchemaAlgebra, ?]],
-    generic: Generic.Aux[TYPE, FIELD_1 :: HNil]
+    generic: LabelledGeneric.Aux[TYPE, FieldType[Symboled[KEY_1], FIELD_1] :: HNil]
   ): Reader[TYPE] =
     Reader(builder.build)
 
-  def is[TYPE <: Product, FIELD_1, FIELD_2](builder: FieldBuilder2[FIELD_1, FIELD_2])(implicit
+  def is[TYPE <: Product, KEY_1, FIELD_1, KEY_2, FIELD_2](builder: FieldBuilder2[KEY_1, FIELD_1, KEY_2, FIELD_2])(implicit
     semigroupal: Semigroupal[Program[ComplexSchemaAlgebra, ?]],
     invariant: Invariant[Program[ComplexSchemaAlgebra, ?]],
-    generic: Generic.Aux[TYPE, FIELD_1 :: FIELD_2 :: HNil]
+    generic: LabelledGeneric.Aux[TYPE, FieldType[Symboled[KEY_1], FIELD_1] :: FieldType[Symboled[KEY_2], FIELD_2] :: HNil]
   ): Reader[TYPE] =
     Reader(builder.build)
 
-  def is[TYPE <: Product, FIELD_1, FIELD_2, FIELD_3](builder: FieldBuilder3[FIELD_1, FIELD_2, FIELD_3])(implicit
+  def is[TYPE <: Product, KEY_1, FIELD_1, KEY_2, FIELD_2, KEY_3, FIELD_3](builder: FieldBuilder3[KEY_1, FIELD_1, KEY_2, FIELD_2, KEY_3, FIELD_3])(implicit
     semigroupal: Semigroupal[Program[ComplexSchemaAlgebra, ?]],
     invariant: Invariant[Program[ComplexSchemaAlgebra, ?]],
-    generic: Generic.Aux[TYPE, FIELD_1 :: FIELD_2 :: FIELD_3 :: HNil]
+    generic: LabelledGeneric.Aux[TYPE, FieldType[Symboled[KEY_1], FIELD_1] :: FieldType[Symboled[KEY_2], FIELD_2] :: FieldType[Symboled[KEY_3], FIELD_3] :: HNil]
   ): Reader[TYPE] =
     Reader(builder.build)
 
-  def is[TYPE <: Product, FIELD_1, FIELD_2, FIELD_3, FIELD_4](builder: FieldBuilder4[FIELD_1, FIELD_2, FIELD_3, FIELD_4])(implicit
+  def is[TYPE <: Product, KEY_1, FIELD_1, KEY_2, FIELD_2, KEY_3, FIELD_3, KEY_4, FIELD_4](builder: FieldBuilder4[KEY_1, FIELD_1, KEY_2, FIELD_2, KEY_3, FIELD_3, KEY_4, FIELD_4])(implicit
     semigroupal: Semigroupal[Program[ComplexSchemaAlgebra, ?]],
     invariant: Invariant[Program[ComplexSchemaAlgebra, ?]],
-    generic: Generic.Aux[TYPE, FIELD_1 :: FIELD_2 :: FIELD_3 :: FIELD_4 :: HNil]
+    generic: LabelledGeneric.Aux[TYPE, FieldType[Symboled[KEY_1], FIELD_1] :: FieldType[Symboled[KEY_2], FIELD_2] :: FieldType[Symboled[KEY_3], FIELD_3] :: FieldType[Symboled[KEY_4], FIELD_4] :: HNil]
   ): Reader[TYPE] =
     Reader(builder.build)
 
-  def is[TYPE <: Product, FIELD_1, FIELD_2, FIELD_3, FIELD_4, FIELD_5](builder: FieldBuilder5[FIELD_1, FIELD_2, FIELD_3, FIELD_4, FIELD_5])(implicit
+  def is[TYPE <: Product, KEY_1, FIELD_1, KEY_2, FIELD_2, KEY_3, FIELD_3, KEY_4, FIELD_4, KEY_5, FIELD_5](builder: FieldBuilder5[KEY_1, FIELD_1, KEY_2, FIELD_2, KEY_3, FIELD_3, KEY_4, FIELD_4, KEY_5, FIELD_5])(implicit
     semigroupal: Semigroupal[Program[ComplexSchemaAlgebra, ?]],
     invariant: Invariant[Program[ComplexSchemaAlgebra, ?]],
-    generic: Generic.Aux[TYPE, FIELD_1 :: FIELD_2 :: FIELD_3 :: FIELD_4 :: FIELD_5 :: HNil]
+    generic: LabelledGeneric.Aux[TYPE, FieldType[Symboled[KEY_1], FIELD_1] :: FieldType[Symboled[KEY_2], FIELD_2] :: FieldType[Symboled[KEY_3], FIELD_3] :: FieldType[Symboled[KEY_4], FIELD_4] :: FieldType[Symboled[KEY_5], FIELD_5] :: HNil]
   ): Reader[TYPE] =
     Reader(builder.build)
 }
