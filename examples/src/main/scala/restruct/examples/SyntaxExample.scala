@@ -3,7 +3,7 @@ package restruct.examples
 import play.api.libs.json.{ Json, Reads }
 import restruct.algebras.json.playjson.reads.JsonReaderInterpreter
 import restruct.examples.SyntaxExample.BankAccount.reads
-import restruct.reader.Reader
+import restruct.reader.Schema
 
 object SyntaxExample extends App {
 
@@ -19,7 +19,7 @@ object SyntaxExample extends App {
     import restruct.reader.Syntax._
     val work = Work.schema
     val bankAccount = BankAccount.schema
-    implicit lazy val schema: Reader[Person] = Reader is (
+    implicit lazy val schema: Schema[Person] = Schema is (
       "lastName".as(string.constrainted(minSize(0))) and
       "firstName".as(string) and
       "bankAccount".as(bankAccount) and
@@ -43,7 +43,7 @@ object SyntaxExample extends App {
 
   object BankAccount {
     import restruct.reader.Syntax._
-    implicit lazy val schema: Reader[BankAccount] = Reader.is(
+    implicit lazy val schema: Schema[BankAccount] = Schema.is(
       "amount".as(bigInt)
     )
 
@@ -61,7 +61,7 @@ object SyntaxExample extends App {
     import restruct.reader.Syntax._
 
     val person = Person.schema
-    implicit lazy val schema: Reader[Work] = Reader is (
+    implicit lazy val schema: Schema[Work] = Schema is (
       "jobTitle".as(string) and
       "salary".as(bigDecimal) and
       "subordinates".as(list.of(person))
