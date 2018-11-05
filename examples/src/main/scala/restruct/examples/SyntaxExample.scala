@@ -1,9 +1,9 @@
 package restruct.examples
 
 import play.api.libs.json.{Json, Reads}
-import restruct.algebras.json.playjson.reads.JsonReaderInterpreter
 import restruct.examples.SyntaxExample.Examples.BankAccount
-import restruct.reader.Schema
+import io.github.methrat0n.restruct.schema.Schema
+import io.github.methrat0n.restruct.readers.json.JsonReaderInterpreter
 
 object SyntaxExample extends App {
 
@@ -16,8 +16,8 @@ object SyntaxExample extends App {
     ) extends Examples
 
     object Person {
-      import restruct.constraints._
-      import restruct.reader.Syntax._
+      import io.github.methrat0n.restruct.constraints._
+      import io.github.methrat0n.restruct.schema.Syntax._
       implicit lazy val schema: Schema[Person] = Schema is (
         "lastName".as(string.constrainted(minSize(0))) and
         "firstName".as(string)
@@ -39,7 +39,7 @@ object SyntaxExample extends App {
     ) extends Examples
 
     object BankAccount {
-      import restruct.reader.Syntax._
+      import io.github.methrat0n.restruct.schema.Syntax._
       implicit lazy val schema: Schema[BankAccount] = Schema.is(
         "amount".as(bigInt)
       )
@@ -54,7 +54,7 @@ object SyntaxExample extends App {
     ) extends Examples
 
     object Work {
-      import restruct.reader.Syntax._
+      import io.github.methrat0n.restruct.schema.Syntax._
 
       val person = Person.schema
       implicit lazy val schema: Schema[Work] = Schema is (
@@ -92,7 +92,8 @@ object SyntaxExample extends App {
     case play.api.libs.json.JsError(errors)     => println(errors)
   }
 
-  restruct.reader.Syntax.bigInt.read(JsonReaderInterpreter).reads(Json.parse("111")) match {
+  import io.github.methrat0n.restruct.schema.Syntax._
+  bigInt.read(JsonReaderInterpreter).reads(Json.parse("111")) match {
     case play.api.libs.json.JsSuccess(value, _) => println(value)
     case play.api.libs.json.JsError(errors)     => println(errors)
   }

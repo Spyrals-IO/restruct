@@ -64,17 +64,11 @@ lazy val bsonWriter = (project in file("./bson/writer"))
   .settings(name := "restruct-bson-writer-schema")
   .dependsOn(core)
 
-lazy val bsonHandler = (project in file("./bson/handler"))
+lazy val bsonHandler = (project in file("./bson/io.github.methrat0n.restruct.bson.handler"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= bsonDependencies)
-  .settings(name := "restruct-bson-handler-schema")
+  .settings(name := "restruct-bson-io.github.methrat0n.restruct.bson.handler-schema")
   .dependsOn(core, bsonReader, bsonWriter)
-
-lazy val urlEncode = (project in file("./urlEncode"))
-  .settings(commonSettings: _*)
-  .settings(libraryDependencies ++= urlEncodeDependencies)
-  .settings(name := "restruct-url-encode-schema")
-  .dependsOn(core)
 
 lazy val examples = (project in file("./examples"))
   .settings(commonSettings: _*)
@@ -108,10 +102,6 @@ lazy val enumeratumDependencies = Seq(
 
 lazy val bsonDependencies = Seq(
   Dependencies.mongo.reactive,
-  Dependencies.cats.core
-)
-
-lazy val urlEncodeDependencies = Seq(
   Dependencies.cats.core
 )
 
