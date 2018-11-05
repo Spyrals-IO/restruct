@@ -1,6 +1,9 @@
 package io.github.methrat0n.restruct.readers.bson
 
-import reactivemongo.bson.{ BSONBoolean, BSONDecimal, BSONDouble, BSONInteger, BSONLong, BSONString }
+import java.time.format.DateTimeFormatter
+import java.time._
+
+import reactivemongo.bson.{ BSONBoolean, BSONDateTime, BSONDecimal, BSONDouble, BSONInteger, BSONLong, BSONString }
 import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
 
 import scala.util.Try
@@ -70,5 +73,26 @@ trait SimpleBsonReaderInterpreter extends SimpleSchemaAlgebra[BsonReader] {
     BsonReader {
       case string: BSONString => string.value
       case other              => throw new RuntimeException(s"Cannot parse $other as a boolean")
+    }
+
+  override def dateTimeSchema: BsonReader[ZonedDateTime] =
+    BsonReader {
+      case dateTime: BSONDateTime => ZonedDateTime.ofInstant(Instant.ofEpochSecond(dateTime.value), ZoneId.of("UTC"))
+      case dateTime: BSONString   => Try { ZonedDateTime.parse(dateTime.value, DateTimeFormatter.ISO_OFFSET_DATE_TIME) }.getOrElse(throw new RuntimeException(s"cannot parse $dateTime as a datetime"))
+      case other                  => throw new RuntimeException(s"cannot parse $other as a datetime")
+    }
+
+  override def timeSchema: BsonReader[LocalTime] =
+    BsonReader {
+      case time: BSONString => Try { LocalTime.parse(time.value, DateTimeFormatter.ISO_LOCAL_TIME) }.getOrElse(throw new RuntimeException(s"cannot parse $time as a time"))
+      case time: BSONLong   => LocalTime.ofSecondOfDay(time.value)
+      case other            => throw new RuntimeException(s"cannot parse $other as a time")
+    }
+
+  override def dateSchema: BsonReader[LocalDate] =
+    BsonReader {
+      case date: BSONString => Try { LocalDate.parse(date.value, DateTimeFormatter.ISO_LOCAL_DATE) }.getOrElse(throw new RuntimeException(s"cannot parse $date as a date"))
+      case date: BSONLong   => LocalDate.ofEpochDay(date.value)
+      case other            => throw new RuntimeException(s"cannot parse $other as a date")
     }
 }

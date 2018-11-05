@@ -1,5 +1,7 @@
 package io.github.methrat0n.restruct.handlers.bson
 
+import java.time.{LocalDate, LocalTime, ZonedDateTime}
+
 import reactivemongo.bson.DefaultBSONHandlers
 import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
 import io.github.methrat0n.restruct.readers.bson.SimpleBsonReaderInterpreter
@@ -58,4 +60,21 @@ trait SimpleBsonFormaterInterpreter extends SimpleSchemaAlgebra[BsonHandler] {
   override def stringSchema: BsonHandler[String] =
     DefaultBSONHandlers.BSONStringHandler.asInstanceOf[BsonHandler[String]]
 
+  override def dateTimeSchema: BsonHandler[ZonedDateTime] =
+    BsonHandler(
+      Reader.dateTimeSchema.read,
+      Writer.dateTimeSchema.write
+    )
+
+  override def timeSchema: BsonHandler[LocalTime] =
+    BsonHandler(
+      Reader.timeSchema.read,
+      Writer.timeSchema.write
+    )
+
+  override def dateSchema: BsonHandler[LocalDate] =
+    BsonHandler(
+      Reader.dateSchema.read,
+      Writer.dateSchema.write
+    )
 }

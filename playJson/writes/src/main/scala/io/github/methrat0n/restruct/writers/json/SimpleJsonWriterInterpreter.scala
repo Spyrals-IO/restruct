@@ -1,5 +1,7 @@
 package io.github.methrat0n.restruct.writers.json
 
+import java.time.{ LocalDate, LocalTime, ZonedDateTime }
+
 import play.api.libs.json.{ JsNumber, JsString, Writes }
 import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
 
@@ -36,4 +38,13 @@ trait SimpleJsonWriterInterpreter extends SimpleSchemaAlgebra[Writes] {
 
   override def bigIntSchema: Writes[BigInt] =
     Writes[BigInt](bigInt => JsNumber(BigDecimal(bigInt)))
+
+  override def dateTimeSchema: Writes[ZonedDateTime] =
+    Writes.DefaultZonedDateTimeWrites
+
+  override def timeSchema: Writes[LocalTime] =
+    Writes.DefaultLocalTimeWrites
+
+  override def dateSchema: Writes[LocalDate] =
+    Writes.DefaultLocalDateWrites
 }

@@ -5,7 +5,7 @@ import io.github.methrat0n.restruct.core.data.schema.ComplexSchemaAlgebra
 import io.github.methrat0n.restruct.readers.bson.ComplexBsonReaderInterpreter
 import io.github.methrat0n.restruct.writers.bson.ComplexBsonWriterInterpreter
 
-class ComplexBsonFormaterInterpreter extends ComplexSchemaAlgebra[BsonHandler]
+trait ComplexBsonFormaterInterpreter extends ComplexSchemaAlgebra[BsonHandler]
   with SimpleBsonFormaterInterpreter with SemiGroupalBsonFormaterInterpreter
   with InvariantBsonFormaterInterpreter with IdentityBsonFormaterInterpreter {
 

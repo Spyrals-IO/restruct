@@ -1,9 +1,11 @@
 package io.github.methrat0n.restruct.writers.jsonschema
 
+import java.time.{ LocalDate, LocalTime, ZonedDateTime }
+
 import cats.data.Const
-import play.api.libs.json.Json
 import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
 import io.github.methrat0n.restruct.writers.json.SimpleJsonWriterInterpreter
+import play.api.libs.json.Json
 
 trait SimpleJsonSchemaWriterInterpreter extends SimpleSchemaAlgebra[JsonSchemaWriter] {
 
@@ -64,4 +66,18 @@ trait SimpleJsonSchemaWriterInterpreter extends SimpleSchemaAlgebra[JsonSchemaWr
       "type" -> "string"
     )), JsonWriter.stringSchema)
 
+  override def dateTimeSchema: JsonSchemaWriter[ZonedDateTime] =
+    (Const(Json.obj(
+      "type" -> "date-time"
+    )), JsonWriter.dateTimeSchema)
+
+  override def timeSchema: JsonSchemaWriter[LocalTime] =
+    (Const(Json.obj(
+      "type" -> "time"
+    )), JsonWriter.timeSchema)
+
+  override def dateSchema: JsonSchemaWriter[LocalDate] =
+    (Const(Json.obj(
+      "type" -> "date"
+    )), JsonWriter.dateSchema)
 }

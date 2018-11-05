@@ -1,5 +1,7 @@
 package io.github.methrat0n.restruct.core.data.schema
 
+import java.time.{ LocalDate, LocalTime, ZonedDateTime }
+
 import io.github.methrat0n.restruct.core.Program
 
 import scala.language.higherKinds
@@ -27,6 +29,12 @@ trait SimpleSchemaAlgebra[F[_]] {
   def booleanSchema: F[Boolean]
 
   def stringSchema: F[String]
+
+  def dateTimeSchema: F[ZonedDateTime]
+
+  def dateSchema: F[LocalDate]
+
+  def timeSchema: F[LocalTime]
 
 }
 
@@ -76,4 +84,11 @@ object SimpleSchemaAlgebra {
     override def run[F[_]](implicit algebra: SimpleSchemaAlgebra[F]): F[String] = algebra.stringSchema
   }
 
+  implicit val dateTimeSchema: Program[SimpleSchemaAlgebra, ZonedDateTime] = new Program[SimpleSchemaAlgebra, ZonedDateTime] {
+    override def run[F[_]](implicit algebra: SimpleSchemaAlgebra[F]): F[ZonedDateTime] = algebra.dateTimeSchema
+  }
+
+  implicit val timeSchema: Program[SimpleSchemaAlgebra, LocalTime] = new Program[SimpleSchemaAlgebra, LocalTime] {
+    override def run[F[_]](implicit algebra: SimpleSchemaAlgebra[F]): F[LocalTime] = algebra.timeSchema
+  }
 }

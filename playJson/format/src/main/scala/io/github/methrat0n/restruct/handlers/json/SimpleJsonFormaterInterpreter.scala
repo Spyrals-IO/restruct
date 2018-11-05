@@ -1,5 +1,7 @@
 package io.github.methrat0n.restruct.handlers.json
 
+import java.time.{ LocalDate, LocalTime, ZonedDateTime }
+
 import play.api.libs.json.Format
 import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
 import io.github.methrat0n.restruct.readers.json.SimpleJsonReaderInterpreter
@@ -76,4 +78,21 @@ trait SimpleJsonFormaterInterpreter extends SimpleSchemaAlgebra[Format] {
       SimpleWriter.stringSchema
     )
 
+  override def dateTimeSchema: Format[ZonedDateTime] =
+    Format(
+      SimpleReader.dateTimeSchema,
+      SimpleWriter.dateTimeSchema
+    )
+
+  override def timeSchema: Format[LocalTime] =
+    Format(
+      SimpleReader.timeSchema,
+      SimpleWriter.timeSchema
+    )
+
+  override def dateSchema: Format[LocalDate] =
+    Format(
+      SimpleReader.dateSchema,
+      SimpleWriter.dateSchema
+    )
 }

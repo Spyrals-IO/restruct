@@ -1,6 +1,7 @@
 package io.github.methrat0n.restruct.readers.json
 
 import java.math.BigInteger
+import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 
 import play.api.libs.json._
 import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
@@ -52,4 +53,12 @@ trait SimpleJsonReaderInterpreter extends SimpleSchemaAlgebra[Reads] {
   override def stringSchema: Reads[String] =
     Reads.StringReads
 
+  override def dateTimeSchema: Reads[ZonedDateTime] =
+    Reads.DefaultZonedDateTimeReads
+
+  override def timeSchema: Reads[LocalTime] =
+    Reads.DefaultLocalTimeReads
+
+  override def dateSchema: Reads[LocalDate] =
+    Reads.DefaultLocalDateReads
 }

@@ -1,6 +1,9 @@
 package io.github.methrat0n.restruct.writers.bson
 
-import reactivemongo.bson.{ BSONDecimal, BSONDouble, BSONInteger, BSONString, DefaultBSONHandlers }
+import java.time.temporal.ChronoField
+import java.time.{ LocalDate, LocalTime, ZonedDateTime }
+
+import reactivemongo.bson.{ BSONDateTime, BSONDecimal, BSONDouble, BSONInteger, BSONString, DefaultBSONHandlers }
 import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
 
 trait SimpleBsonWriterInterpreter extends SimpleSchemaAlgebra[BsonWriter] {
@@ -37,4 +40,13 @@ trait SimpleBsonWriterInterpreter extends SimpleSchemaAlgebra[BsonWriter] {
 
   override def stringSchema: BsonWriter[String] =
     DefaultBSONHandlers.BSONStringHandler
+
+  override def dateTimeSchema: BsonWriter[ZonedDateTime] =
+    BsonWriter(zoned => BSONDateTime(zoned.get(ChronoField.OFFSET_SECONDS)))
+
+  override def timeSchema: BsonWriter[LocalTime] =
+    BsonWriter(local => BSONDateTime(local.getLong(ChronoField.OFFSET_SECONDS)))
+
+  override def dateSchema: BsonWriter[LocalDate] =
+    BsonWriter(date => BSONDateTime(date.getLong(ChronoField.OFFSET_SECONDS) / 86400)) //number of second in a day
 }
