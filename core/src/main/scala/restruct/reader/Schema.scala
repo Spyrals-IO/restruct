@@ -5,13 +5,13 @@ import restruct.core.Program
 import restruct.core.data.constraints.Constraint
 import restruct.core.data.schema.ComplexSchemaAlgebra
 import restruct.reader.Syntax.{ FieldBuilder1, FieldBuilder2, FieldBuilder3, FieldBuilder4, FieldBuilder5 }
-import shapeless.{ ::, Generic, HNil }
+import shapeless.{ ::, Coproduct, Generic, HNil }
 
 import scala.language.higherKinds
 
 trait Schema[A] {
 
-  protected def program: Program[ComplexSchemaAlgebra, A]
+  protected[reader] def program: Program[ComplexSchemaAlgebra, A]
   protected def default: Option[A]
 
   def constrainted(constraint: Constraint[A]): Schema[A] = Schema(new Program[ComplexSchemaAlgebra, A] {
@@ -32,6 +32,9 @@ trait FieldSchema[A] {
 
   protected[reader] def program: Program[ComplexSchemaAlgebra, A]
   protected def name: String
+
+  def read[FORMAT[_]](algebra: ComplexSchemaAlgebra[FORMAT]): FORMAT[A] =
+    program.run(algebra)
 
   def defaultTo(defaultA: A): FieldSchema[A] = FieldSchema[A](name, new Program[ComplexSchemaAlgebra, A] {
     override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[A] =
@@ -93,6 +96,46 @@ object Schema {
     generic: Generic.Aux[TYPE, FIELD_1 :: FIELD_2 :: FIELD_3 :: FIELD_4 :: FIELD_5 :: HNil]
   ): Schema[TYPE] =
     Schema(builder.build)
+
+  //Coproduct schema construction
+
+  def is[COPRODUCT <: Coproduct, PRODUCT_1 <: COPRODUCT](schema1: Schema[PRODUCT_1]): Schema[COPRODUCT] =
+    schema1.asInstanceOf[Schema[COPRODUCT]]
+
+  def is[COPRODUCT <: Coproduct, PRODUCT_1 <: COPRODUCT, PRODUCT_2 <: COPRODUCT](schema1: Schema[PRODUCT_1], schema2: Schema[PRODUCT_2])(implicit manifest1: Manifest[PRODUCT_1], manifest2: Manifest[PRODUCT_2]): Schema[COPRODUCT] =
+    Schema(new Program[ComplexSchemaAlgebra, COPRODUCT] {
+      override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[COPRODUCT] = {
+        val f1 = schema1.program.run(algebra)
+        val f2 = schema2.program.run(algebra)
+
+        algebra.imap(algebra.either(f1, f2))({
+          case Right(product) => product
+          case Left(product)  => product
+        })({
+          case product: PRODUCT_2 => Right(product)
+          case product: PRODUCT_1 => Left(product)
+        })
+      }
+    })
+
+  def is[COPRODUCT, PRODUCT_1 <: COPRODUCT, PRODUCT_2 <: COPRODUCT, PRODUCT_3 <: COPRODUCT](schema1: Schema[PRODUCT_1], schema2: Schema[PRODUCT_2], schema3: Schema[PRODUCT_3])(implicit manifest1: Manifest[PRODUCT_1], manifest2: Manifest[PRODUCT_2], manifest3: Manifest[PRODUCT_3]): Schema[COPRODUCT] =
+    Schema(new Program[ComplexSchemaAlgebra, COPRODUCT] {
+      override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[COPRODUCT] = {
+        val f1 = schema1.program.run(algebra)
+        val f2 = schema2.program.run(algebra)
+        val f3 = schema3.program.run(algebra)
+
+        algebra.imap(algebra.either(f1, algebra.either(f2, f3)))({
+          case Right(Right(product)) => product
+          case Right(Left(product))  => product
+          case Left(product)         => product
+        })({
+          case product: PRODUCT_3 => Right(Right(product))
+          case product: PRODUCT_2 => Right(Left(product))
+          case product: PRODUCT_1 => Left(product)
+        })
+      }
+    })
 }
 
 object FieldSchema {

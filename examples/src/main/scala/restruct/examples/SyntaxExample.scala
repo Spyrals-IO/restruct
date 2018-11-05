@@ -1,77 +1,80 @@
 package restruct.examples
 
-import play.api.libs.json.{ Json, Reads }
+import play.api.libs.json.{Json, Reads}
 import restruct.algebras.json.playjson.reads.JsonReaderInterpreter
-import restruct.examples.SyntaxExample.BankAccount.reads
+import restruct.examples.SyntaxExample.Examples.BankAccount
 import restruct.reader.Schema
 
 object SyntaxExample extends App {
 
-  final case class Person(
-    lastName: String,
-    firstName: String,
-    bankAccount: BankAccount,
-    work: Option[Work]
-  )
+  sealed trait Examples
 
-  object Person {
-    import restruct.constraints._
-    import restruct.reader.Syntax._
-    val work = Work.schema
-    val bankAccount = BankAccount.schema
-    implicit lazy val schema: Schema[Person] = Schema is (
-      "lastName".as(string.constrainted(minSize(0))) and
-      "firstName".as(string) and
-      "bankAccount".as(bankAccount) and
-      "work".as(option.of(work))
+  object Examples {
+    final case class Person(
+      lastName: String,
+      firstName: String
+    ) extends Examples
+
+    object Person {
+      import restruct.constraints._
+      import restruct.reader.Syntax._
+      implicit lazy val schema: Schema[Person] = Schema is (
+        "lastName".as(string.constrainted(minSize(0))) and
+        "firstName".as(string)
+      )
+      val json = JsonReaderInterpreter
+      lazy val reads: Reads[Person] = schema.read(json)
+
+      val personJson =
+        """
+          |{
+          |  lastName: 1,
+          |  firstName:
+          |}
+        """.stripMargin
+    }
+
+    final case class BankAccount(
+      amount: BigInt
+    ) extends Examples
+
+    object BankAccount {
+      import restruct.reader.Syntax._
+      implicit lazy val schema: Schema[BankAccount] = Schema.is(
+        "amount".as(bigInt)
+      )
+
+      val json = JsonReaderInterpreter
+      lazy val reads: Reads[BankAccount] = schema.read(json)
+    }
+
+    final case class Work(
+      jobTitle: String,
+      salary: BigDecimal,
+    ) extends Examples
+
+    object Work {
+      import restruct.reader.Syntax._
+
+      val person = Person.schema
+      implicit lazy val schema: Schema[Work] = Schema is (
+        "jobTitle".as(string) and
+        "salary".as(bigDecimal)
+      )
+    }
+
+    implicit val schema: Schema[Examples] = Schema is (
+      Person.schema, BankAccount.schema, Work.schema
     )
     val json = JsonReaderInterpreter
-    lazy val reads: Reads[Person] = schema.read(json)
-
-    val personJson =
-      """
-        |{
-        |  lastName: 1,
-        |  firstName:
-        |}
-      """.stripMargin
-  }
-
-  final case class BankAccount(
-    amount: BigInt
-  )
-
-  object BankAccount {
-    import restruct.reader.Syntax._
-    implicit lazy val schema: Schema[BankAccount] = Schema.is(
-      "amount".as(bigInt)
-    )
-
-    val json = JsonReaderInterpreter
-    lazy val reads: Reads[BankAccount] = schema.read(json)
-  }
-
-  final case class Work(
-    jobTitle: String,
-    salary: BigDecimal,
-    subordinates: List[Person]
-  )
-
-  object Work {
-    import restruct.reader.Syntax._
-
-    val person = Person.schema
-    implicit lazy val schema: Schema[Work] = Schema is (
-      "jobTitle".as(string) and
-      "salary".as(bigDecimal) and
-      "subordinates".as(list.of(person))
-    )
+    val reads: Reads[Examples] = schema.read(json)
   }
 
   val goodJson =
     """
       |{
-      |  "amount": 111
+      |  "jobTitle": "title",
+      |  "salary": 12
       |}
     """.stripMargin
 
@@ -84,7 +87,7 @@ object SyntaxExample extends App {
 
   println(BankAccount.schema)
 
-  reads.reads(Json.parse(goodJson)) match {
+  Examples.reads.reads(Json.parse(goodJson)) match {
     case play.api.libs.json.JsSuccess(value, _) => println(value)
     case play.api.libs.json.JsError(errors)     => println(errors)
   }
@@ -93,4 +96,5 @@ object SyntaxExample extends App {
     case play.api.libs.json.JsSuccess(value, _) => println(value)
     case play.api.libs.json.JsError(errors)     => println(errors)
   }
+
 }
