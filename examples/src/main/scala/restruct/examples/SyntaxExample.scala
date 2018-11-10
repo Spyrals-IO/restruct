@@ -23,7 +23,7 @@ object SyntaxExample extends App {
         "firstName".as(string)
       )
       val json = JsonReaderInterpreter
-      lazy val reads: Reads[Person] = schema.read(json)
+      lazy val reads: Reads[Person] = schema.bind(json)
 
       val personJson =
         """
@@ -45,7 +45,7 @@ object SyntaxExample extends App {
       )
 
       val json = JsonReaderInterpreter
-      lazy val reads: Reads[BankAccount] = schema.read(json)
+      lazy val reads: Reads[BankAccount] = schema.bind(json)
     }
 
     final case class Work(
@@ -67,7 +67,7 @@ object SyntaxExample extends App {
       Person.schema, BankAccount.schema, Work.schema
     )
     val json = JsonReaderInterpreter
-    val reads: Reads[Examples] = schema.read(json)
+    val reads: Reads[Examples] = schema.bind(json)
   }
 
   val goodJson =
@@ -93,7 +93,7 @@ object SyntaxExample extends App {
   }
 
   import io.github.methrat0n.restruct.schema.Syntax._
-  bigInt.read(JsonReaderInterpreter).reads(Json.parse("111")) match {
+  bigInt.bind(JsonReaderInterpreter).reads(Json.parse("111")) match {
     case play.api.libs.json.JsSuccess(value, _) => println(value)
     case play.api.libs.json.JsError(errors)     => println(errors)
   }

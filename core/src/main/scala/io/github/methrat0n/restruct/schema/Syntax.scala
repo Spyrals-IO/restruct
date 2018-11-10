@@ -1,5 +1,7 @@
 package io.github.methrat0n.restruct.schema
 
+import java.time.{ LocalDate, LocalTime, ZonedDateTime }
+
 import cats.{ Invariant, Semigroupal }
 import io.github.methrat0n.restruct.core.Program
 import io.github.methrat0n.restruct.core.data.schema.ComplexSchemaAlgebra
@@ -9,17 +11,61 @@ import scala.language.higherKinds
 
 object Syntax {
 
-  val bigInt: Schema[BigInt] = Schema(new Program[ComplexSchemaAlgebra, BigInt] {
-    override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[BigInt] =
-      algebra.bigIntSchema
+  val string: Schema[String] = Schema(new Program[ComplexSchemaAlgebra, String] {
+    override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[String] =
+      algebra.stringSchema
+  })
+  val decimal: Schema[Double] = Schema(new Program[ComplexSchemaAlgebra, Double] {
+    override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[Double] =
+      algebra.decimalSchema
+  })
+  val integer: Schema[Int] = Schema(new Program[ComplexSchemaAlgebra, Int] {
+    override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[Int] =
+      algebra.integerSchema
+  })
+  val boolean: Schema[Boolean] = Schema(new Program[ComplexSchemaAlgebra, Boolean] {
+    override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[Boolean] =
+      algebra.booleanSchema
+  })
+  val char: Schema[Char] = Schema(new Program[ComplexSchemaAlgebra, Char] {
+    override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[Char] =
+      algebra.charSchema
+  })
+  val byte: Schema[Byte] = Schema(new Program[ComplexSchemaAlgebra, Byte] {
+    override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[Byte] =
+      algebra.byteSchema
+  })
+  val short: Schema[Short] = Schema(new Program[ComplexSchemaAlgebra, Short] {
+    override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[Short] =
+      algebra.shortSchema
+  })
+  val float: Schema[Float] = Schema(new Program[ComplexSchemaAlgebra, Float] {
+    override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[Float] =
+      algebra.floatSchema
   })
   val bigDecimal: Schema[BigDecimal] = Schema(new Program[ComplexSchemaAlgebra, BigDecimal] {
     override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[BigDecimal] =
       algebra.bigDecimalSchema
   })
-  val string: Schema[String] = Schema(new Program[ComplexSchemaAlgebra, String] {
-    override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[String] =
-      algebra.stringSchema
+  val long: Schema[Long] = Schema(new Program[ComplexSchemaAlgebra, Long] {
+    override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[Long] =
+      algebra.longSchema
+  })
+  val bigInt: Schema[BigInt] = Schema(new Program[ComplexSchemaAlgebra, BigInt] {
+    override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[BigInt] =
+      algebra.bigIntSchema
+  })
+  val dateTime: Schema[ZonedDateTime] = Schema(new Program[ComplexSchemaAlgebra, ZonedDateTime] {
+    override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[ZonedDateTime] =
+      algebra.dateTimeSchema
+  })
+  val time: Schema[LocalTime] = Schema(new Program[ComplexSchemaAlgebra, LocalTime] {
+    override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[LocalTime] =
+      algebra.timeSchema
+  })
+  val date: Schema[LocalDate] = Schema(new Program[ComplexSchemaAlgebra, LocalDate] {
+    override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[LocalDate] =
+      algebra.dateSchema
   })
 
   val option: SchemaConstructor[Option] = new SchemaConstructor[Option] {
@@ -27,12 +73,12 @@ object Syntax {
       override protected def name: String = nme
       override protected[schema] def program: Program[ComplexSchemaAlgebra, Option[A]] = new Program[ComplexSchemaAlgebra, Option[A]] {
         override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[Option[A]] =
-          algebra.optional(nme, reader.read(algebra), None)
+          algebra.optional(nme, reader.bind(algebra), None)
       }
 
       override def defaultTo(defaultA: Option[A]): FieldSchema[Option[A]] = FieldSchema[Option[A]](nme, new Program[ComplexSchemaAlgebra, Option[A]] {
         override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[Option[A]] =
-          algebra.optional[A](nme, reader.read(algebra), Some(defaultA))
+          algebra.optional[A](nme, reader.bind(algebra), Some(defaultA))
       })
     }
   }
@@ -41,12 +87,12 @@ object Syntax {
       override protected def name: String = nme
       override protected[schema] def program: Program[ComplexSchemaAlgebra, List[A]] = new Program[ComplexSchemaAlgebra, List[A]] {
         override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[List[A]] =
-          algebra.many(nme, reader.read(algebra), None)
+          algebra.many(nme, reader.bind(algebra), None)
       }
 
       override def defaultTo(defaultA: List[A]): FieldSchema[List[A]] = FieldSchema[List[A]](nme, new Program[ComplexSchemaAlgebra, List[A]] {
         override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[List[A]] =
-          algebra.many[A](nme, reader.read(algebra), Some(defaultA))
+          algebra.many[A](nme, reader.bind(algebra), Some(defaultA))
       })
     }
   }

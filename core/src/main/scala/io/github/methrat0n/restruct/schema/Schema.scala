@@ -24,7 +24,7 @@ trait Schema[A] {
       algebra.required(name, program.run(algebra), default)
   })
 
-  def read[FORMAT[_]](algebra: ComplexSchemaAlgebra[FORMAT]): FORMAT[A] =
+  def bind[FORMAT[_]](algebra: ComplexSchemaAlgebra[FORMAT]): FORMAT[A] =
     program.run(algebra)
 }
 
@@ -32,9 +32,6 @@ trait FieldSchema[A] {
 
   protected[schema] def program: Program[ComplexSchemaAlgebra, A]
   protected def name: String
-
-  def read[FORMAT[_]](algebra: ComplexSchemaAlgebra[FORMAT]): FORMAT[A] =
-    program.run(algebra)
 
   def defaultTo(defaultA: A): FieldSchema[A] = FieldSchema[A](name, new Program[ComplexSchemaAlgebra, A] {
     override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[A] =
