@@ -1,40 +1,18 @@
 package io.github.methrat0n.restruct.handlers.json
 
-import play.api.libs.json.Format
-import io.github.methrat0n.restruct.core.data.constraints.Constraint
 import io.github.methrat0n.restruct.core.data.schema.ComplexSchemaAlgebra
-import io.github.methrat0n.restruct.readers.json.ComplexJsonReaderInterpreter
-import io.github.methrat0n.restruct.writers.json.ComplexJsonWriterInterpreter
+import io.github.methrat0n.restruct.readers.json.JsonReaderInterpreter
+import io.github.methrat0n.restruct.writers.json.JsonWriterInterpreter
+import play.api.libs.json.Format
 
-trait ComplexJsonFormaterInterpreter extends ComplexSchemaAlgebra[Format]
-  with SimpleJsonFormaterInterpreter with SemiGroupalJsonFormaterInterpreter
-  with InvariantJsonFormaterInterpreter with IdentityJsonFormaterInterpreter {
+trait ComplexJsonFormaterInterpreter extends ComplexSchemaAlgebra[Format] {
 
-  private[this] object ComplexReader extends ComplexJsonReaderInterpreter
-  private[this] object ComplexWriter extends ComplexJsonWriterInterpreter
+  private[this] val writer = JsonWriterInterpreter
+  private[this] val reader = JsonReaderInterpreter
 
-  override def many[T](name: String, schema: Format[T], default: Option[List[T]]): Format[List[T]] =
+  override def many[T](schema: Format[T]): Format[List[T]] =
     Format(
-      ComplexReader.many(name, schema, default),
-      ComplexWriter.many(name, schema, default)
+      reader.many(schema),
+      writer.many(schema)
     )
-
-  override def optional[T](name: String, schema: Format[T], default: Option[Option[T]]): Format[Option[T]] =
-    Format(
-      ComplexReader.optional(name, schema, default),
-      ComplexWriter.optional(name, schema, default)
-    )
-
-  override def required[T](name: String, schema: Format[T], default: Option[T]): Format[T] =
-    Format(
-      ComplexReader.required(name, schema, default),
-      ComplexWriter.required(name, schema, default)
-    )
-
-  override def verifying[T](schema: Format[T], constraint: Constraint[T]): Format[T] =
-    Format(
-      ComplexReader.verifying(schema, constraint),
-      ComplexWriter.verifying(schema, constraint)
-    )
-
 }

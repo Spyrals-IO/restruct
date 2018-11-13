@@ -4,6 +4,7 @@ object Dependencies {
   object cats {
     val version = "1.0.1" //TODO minimify
     val core = "org.typelevel" %% "cats-core" % version
+    val alley = "org.typelevel" %% "alleycats-core" % version
   }
 
   object enumeratum {

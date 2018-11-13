@@ -1,7 +1,7 @@
 package io.github.methrat0n.restruct.core
 
 import cats.{ Invariant, Semigroupal }
-import io.github.methrat0n.restruct.core.data.schema.ComplexSchemaAlgebra
+import io.github.methrat0n.restruct.core.data.schema.FieldAlgebra
 
 import scala.language.higherKinds
 
@@ -20,17 +20,16 @@ object Program {
       invariant.imap(program)(f)(g)
   }
 
-  //Todo try to limit the algebra to the most tiny one, semigroupal and invariant here
-  implicit def semiGroupal: Semigroupal[Program[ComplexSchemaAlgebra, ?]] = new Semigroupal[Program[ComplexSchemaAlgebra, ?]] {
-    override def product[A, B](fa: Program[ComplexSchemaAlgebra, A], fb: Program[ComplexSchemaAlgebra, B]): Program[ComplexSchemaAlgebra, (A, B)] = new Program[ComplexSchemaAlgebra, (A, B)] {
-      override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[(A, B)] =
+  implicit def semiGroupal: Semigroupal[Program[FieldAlgebra, ?]] = new Semigroupal[Program[FieldAlgebra, ?]] {
+    override def product[A, B](fa: Program[FieldAlgebra, A], fb: Program[FieldAlgebra, B]): Program[FieldAlgebra, (A, B)] = new Program[FieldAlgebra, (A, B)] {
+      override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[(A, B)] =
         algebra.product(fa.run(algebra), fb.run(algebra))
     }
   }
 
-  implicit def invariant: Invariant[Program[ComplexSchemaAlgebra, ?]] = new Invariant[Program[ComplexSchemaAlgebra, ?]] {
-    override def imap[A, B](fa: Program[ComplexSchemaAlgebra, A])(f: A => B)(g: B => A): Program[ComplexSchemaAlgebra, B] = new Program[ComplexSchemaAlgebra, B] {
-      override def run[F[_]](implicit algebra: ComplexSchemaAlgebra[F]): F[B] =
+  implicit def invariant: Invariant[Program[FieldAlgebra, ?]] = new Invariant[Program[FieldAlgebra, ?]] {
+    override def imap[A, B](fa: Program[FieldAlgebra, A])(f: A => B)(g: B => A): Program[FieldAlgebra, B] = new Program[FieldAlgebra, B] {
+      override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[B] =
         algebra.imap(fa.run(algebra))(f)(g)
     }
   }

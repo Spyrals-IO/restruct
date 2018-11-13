@@ -1,12 +1,11 @@
 package io.github.methrat0n.restruct.writers
 
-import cats.data.Const
 import play.api.libs.json.{ JsArray, JsObject, Writes }
 
 import scala.collection.immutable.ListMap
 
 package object jsonschema {
-  type JsonSchemaWriter[A] = (Const[JsObject, A], Writes[A]) //TODO how is Const useful ? Seems to work without it
+  type JsonSchemaWriter[A] = (JsObject, Writes[A])
 
   private[jsonschema] def deepMerge(current: JsObject, other: JsObject): JsObject = {
       def merge(existingObject: JsObject, otherObject: JsObject): JsObject = {

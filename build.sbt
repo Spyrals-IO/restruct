@@ -33,12 +33,6 @@ lazy val format = (project in file("./playJson/format"))
   .settings(name := "restruct-play-json-format")
   .dependsOn(core, writes, reads)
 
-lazy val refined = (project in file("./refined"))
-  .settings(commonSettings: _*)
-  .settings(libraryDependencies ++= refinedDependencies)
-  .settings(name := "restruct-refined-schema")
-  .dependsOn(core)
-
 lazy val enumeratum = (project in file("./enumeratum"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= enumeratumDependencies)
@@ -64,10 +58,10 @@ lazy val bsonWriter = (project in file("./bson/writer"))
   .settings(name := "restruct-bson-writer-schema")
   .dependsOn(core)
 
-lazy val bsonHandler = (project in file("./bson/io.github.methrat0n.restruct.bson.handler"))
+lazy val bsonHandler = (project in file("./bson/handler"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= bsonDependencies)
-  .settings(name := "restruct-bson-io.github.methrat0n.restruct.bson.handler-schema")
+  .settings(name := "restruct-bson-handler-schema")
   .dependsOn(core, bsonReader, bsonWriter)
 
 lazy val examples = (project in file("./examples"))
@@ -82,27 +76,27 @@ lazy val commonSettings =
 
 lazy val coreDependencies = Seq(
   Dependencies.cats.core,
+  Dependencies.cats.alley,
   Dependencies.test.scalaTest,
   Dependencies.shapeless.shapeless
 )
 
 lazy val playJsonDependencies = Seq(
-  Dependencies.json.play
-)
-
-lazy val refinedDependencies = Seq(
-  Dependencies.refined.core,
-  Dependencies.cats.core
+  Dependencies.json.play,
+  Dependencies.cats.core,
+  Dependencies.cats.alley,
 )
 
 lazy val enumeratumDependencies = Seq(
   Dependencies.enumeratum.enum,
-  Dependencies.cats.core
+  Dependencies.cats.core,
+  Dependencies.cats.alley,
 )
 
 lazy val bsonDependencies = Seq(
   Dependencies.mongo.reactive,
-  Dependencies.cats.core
+  Dependencies.cats.core,
+  Dependencies.cats.alley,
 )
 
 import scalariform.formatter.preferences._
