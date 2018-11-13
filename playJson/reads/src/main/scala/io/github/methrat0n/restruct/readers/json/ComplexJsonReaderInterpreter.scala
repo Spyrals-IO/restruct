@@ -1,30 +1,13 @@
 package io.github.methrat0n.restruct.readers.json
 
-import play.api.libs.json.{ JsPath, JsonValidationError, Reads }
-import io.github.methrat0n.restruct.core.data.constraints.Constraint
 import io.github.methrat0n.restruct.core.data.schema.ComplexSchemaAlgebra
+import play.api.libs.json._
 
 import scala.collection.generic.CanBuildFrom
 
-trait ComplexJsonReaderInterpreter extends ComplexSchemaAlgebra[Reads]
-  with SimpleJsonReaderInterpreter with InvariantJsonReaderInterpreter
-  with IdentityJsonReaderInterpreter with SemiGroupalJsonReaderInterpreter {
+trait ComplexJsonReaderInterpreter extends ComplexSchemaAlgebra[Reads] {
 
-  private def readsWithDefault[T](name: String, reads: Reads[T], default: Option[T]): Reads[T] =
-    default.map(default => (JsPath \ name).readWithDefault(default)(reads)).getOrElse((JsPath \ name).read(reads))
-
-  override def many[T](name: String, schema: Reads[T], default: Option[List[T]]): Reads[List[T]] =
-    readsWithDefault(
-      name, Reads.traversableReads[List, T](implicitly[CanBuildFrom[List[_], T, List[T]]], schema), default
-    )
-
-  override def optional[T](name: String, schema: Reads[T], default: Option[Option[T]]): Reads[Option[T]] =
-    (JsPath \ name).readNullableWithDefault(default.flatten)(schema)
-
-  override def required[T](name: String, schema: Reads[T], default: Option[T]): Reads[T] =
-    readsWithDefault(name, schema, default)
-
-  override def verifying[T](schema: Reads[T], constraint: Constraint[T]): Reads[T] =
-    schema.filter(JsonValidationError(s"error.constraints.${constraint.name}", constraint.args: _*))(constraint.validate)
+  override def many[T](schema: Reads[T]): Reads[List[T]] =
+    Reads.traversableReads[List, T](implicitly[CanBuildFrom[List[_], T, List[T]]], schema)
 
 }
