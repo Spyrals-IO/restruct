@@ -13,12 +13,9 @@ trait SchemaConstructor[TYPE_CONSTRUCTOR[_]] {
   def of[A](schema: Schema[A]): Schema[TYPE_CONSTRUCTOR[A]]
 }
 
-sealed trait Schema[A] { self =>
-
+sealed trait Schema[A] {
   def constraints: List[Constraint[A]]
-
   def constraintedBy(constraint: Constraint[A]): Schema[A]
-
   def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[A]
 }
 

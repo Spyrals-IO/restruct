@@ -8,9 +8,7 @@ import language.higherKinds
 sealed trait Field[Type] {
   def path: Path
   def default: Option[Type]
-
   def defaultTo(default: Type): Field[Type]
-
   def program: Program[FieldAlgebra, Type]
 }
 
