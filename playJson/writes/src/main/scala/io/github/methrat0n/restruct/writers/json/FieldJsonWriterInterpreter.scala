@@ -1,15 +1,15 @@
 package io.github.methrat0n.restruct.writers.json
 
 import io.github.methrat0n.restruct.core.data.constraints.Constraint
-import io.github.methrat0n.restruct.core.data.schema.FieldAlgebra
+import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, IntStep, Path, StringStep }
 import play.api.libs.json._
 
 trait FieldJsonWriterInterpreter extends FieldAlgebra[Writes] {
-  override def required[T](name: String, schema: Writes[T], default: Option[T]): Writes[T] =
-    (JsPath \ name).write(schema)
+  override def required[T](path: Path, schema: Writes[T], default: Option[T]): Writes[T] =
+    path2JsPath(path).write(schema)
 
-  override def optional[T](name: String, schema: Writes[T], default: Option[Option[T]]): Writes[Option[T]] =
-    (JsPath \ name).writeNullable(schema)
+  override def optional[T](path: Path, schema: Writes[T], default: Option[Option[T]]): Writes[Option[T]] =
+    path2JsPath(path).writeNullable(schema)
 
   override def verifying[T](schema: Writes[T], constraint: Constraint[T]): Writes[T] =
     schema
@@ -33,4 +33,10 @@ trait FieldJsonWriterInterpreter extends FieldAlgebra[Writes] {
   import play.api.libs.functional.syntax._
   override def imap[A, B](fa: Writes[A])(f: A => B)(g: B => A): Writes[B] =
     fa.contramap(g)
+
+  private[this] def path2JsPath(path: Path): JsPath =
+    JsPath(path.steps.toList.map {
+      case StringStep(step) => KeyPathNode(step)
+      case IntStep(step)    => IdxPathNode(step)
+    })
 }

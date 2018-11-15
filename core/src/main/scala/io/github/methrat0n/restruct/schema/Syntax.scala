@@ -2,10 +2,9 @@ package io.github.methrat0n.restruct.schema
 
 import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 
-import cats.{ Invariant, Semigroupal }
+import cats.data.NonEmptyList
 import io.github.methrat0n.restruct.core.Program
-import io.github.methrat0n.restruct.core.data.schema.FieldAlgebra
-import shapeless.{ ::, Generic, HList, HNil }
+import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, IntStep, Path, StringStep }
 
 import scala.language.higherKinds
 
@@ -75,95 +74,8 @@ object Syntax {
     })
   }
 
-  implicit class FieldName(val name: String) extends AnyVal {
-    def as[A](reader: Schema[A]): FieldBuilder1[A] = FieldBuilder1(reader.bindName(name))
-  }
+  import scala.language.implicitConversions
 
-  final case class FieldBuilder1[FIELD_1](reader1: FieldSchema[FIELD_1]) {
-    def and[FIELD_2](fieldBuilder: FieldBuilder1[FIELD_2]): FieldBuilder2[FIELD_1, FIELD_2] =
-      FieldBuilder2(reader1, fieldBuilder.reader1)
-
-    def build[TYPE <: Product](implicit
-      invariant: Invariant[Program[FieldAlgebra, ?]],
-      generic: Generic.Aux[TYPE, FIELD_1 :: HNil]
-    ): Program[FieldAlgebra, TYPE] = {
-      reader1.program.imap(_ :: HNil)(_.head)
-        .imap(generic.from)(generic.to)
-    }
-  }
-
-  final case class FieldBuilder2[FIELD_1, FIELD_2](reader1: FieldSchema[FIELD_1], reader2: FieldSchema[FIELD_2]) {
-    def and[FIELD_3](fieldBuilder: FieldBuilder1[FIELD_3]): FieldBuilder3[FIELD_1, FIELD_2, FIELD_3] =
-      FieldBuilder3(reader1, reader2, fieldBuilder.reader1)
-
-    def build[TYPE <: Product](implicit
-      semigroupal: Semigroupal[Program[FieldAlgebra, ?]],
-      invariant: Invariant[Program[FieldAlgebra, ?]],
-      generic: Generic.Aux[TYPE, FIELD_1 :: FIELD_2 :: HNil]
-    ): Program[FieldAlgebra, TYPE] = {
-      reader1.program.product(
-        reader2.program
-      ).imap(firstTuple2ToHlist)(firstHlistToTuple2)
-        .imap(generic.from)(generic.to)
-    }
-  }
-
-  final case class FieldBuilder3[FIELD_1, FIELD_2, FIELD_3](reader1: FieldSchema[FIELD_1], reader2: FieldSchema[FIELD_2], reader3: FieldSchema[FIELD_3]) {
-    def and[FIELD_4](fieldBuilder: FieldBuilder1[FIELD_4]): FieldBuilder4[FIELD_1, FIELD_2, FIELD_3, FIELD_4] =
-      FieldBuilder4(reader1, reader2, reader3, fieldBuilder.reader1)
-
-    def build[TYPE <: Product](implicit
-      semigroupal: Semigroupal[Program[FieldAlgebra, ?]],
-      invariant: Invariant[Program[FieldAlgebra, ?]],
-      generic: Generic.Aux[TYPE, FIELD_1 :: FIELD_2 :: FIELD_3 :: HNil]
-    ): Program[FieldAlgebra, TYPE] = {
-      reader1.program.product(
-        reader2.program.product(reader3.program).imap(firstTuple2ToHlist)(firstHlistToTuple2)
-      ).imap(tuple2ToHlist)(hlistToTuple2)
-        .imap(generic.from)(generic.to)
-    }
-  }
-
-  final case class FieldBuilder4[FIELD_1, FIELD_2, FIELD_3, FIELD_4](reader1: FieldSchema[FIELD_1], reader2: FieldSchema[FIELD_2], reader3: FieldSchema[FIELD_3], reader4: FieldSchema[FIELD_4]) {
-    def and[FIELD_5](fieldBuilder: FieldBuilder1[FIELD_5]): FieldBuilder5[FIELD_1, FIELD_2, FIELD_3, FIELD_4, FIELD_5] =
-      FieldBuilder5(reader1, reader2, reader3, reader4, fieldBuilder.reader1)
-
-    def build[TYPE <: Product](implicit
-      semigroupal: Semigroupal[Program[FieldAlgebra, ?]],
-      invariant: Invariant[Program[FieldAlgebra, ?]],
-      generic: Generic.Aux[TYPE, FIELD_1 :: FIELD_2 :: FIELD_3 :: FIELD_4 :: HNil]
-    ): Program[FieldAlgebra, TYPE] = {
-      reader1.program.product(
-        reader2.program.product(
-          reader3.program.product(reader4.program).imap(firstTuple2ToHlist)(firstHlistToTuple2)
-        ).imap(tuple2ToHlist)(hlistToTuple2)
-      ).imap(tuple2ToHlist)(hlistToTuple2)
-        .imap(generic.from)(generic.to)
-    }
-  }
-
-  final case class FieldBuilder5[FIELD_1, FIELD_2, FIELD_3, FIELD_4, FIELD_5](reader1: FieldSchema[FIELD_1], reader2: FieldSchema[FIELD_2], reader3: FieldSchema[FIELD_3], reader4: FieldSchema[FIELD_4], reader5: FieldSchema[FIELD_5]) {
-    def build[TYPE <: Product](implicit
-      semigroupal: Semigroupal[Program[FieldAlgebra, ?]],
-      invariant: Invariant[Program[FieldAlgebra, ?]],
-      generic: Generic.Aux[TYPE, FIELD_1 :: FIELD_2 :: FIELD_3 :: FIELD_4 :: FIELD_5 :: HNil]
-    ): Program[FieldAlgebra, TYPE] = {
-      reader1.program.product(
-        reader2.program.product(
-          reader3.program.product(
-            reader4.program.product(reader5.program).imap(firstTuple2ToHlist)(firstHlistToTuple2)
-          ).imap(tuple2ToHlist)(hlistToTuple2)
-        ).imap(tuple2ToHlist)(hlistToTuple2)
-      ).imap(tuple2ToHlist)(hlistToTuple2)
-        .imap(generic.from)(generic.to)
-    }
-  }
-
-  private def firstTuple2ToHlist[A, B](tuple: (A, B)): A :: B :: HNil = tuple2ToHlist((tuple._1, tuple._2 :: HNil))
-  private def firstHlistToTuple2[A, B](hlist: A :: B :: HNil): (A, B) = {
-    val tuple = hlistToTuple2(hlist)
-    (tuple._1, tuple._2.head)
-  }
-  private def tuple2ToHlist[A, B <: HList](tuple: (A, B)): A :: B = tuple._1 :: tuple._2
-  private def hlistToTuple2[A, B <: HList](hlist: A :: B): (A, B) = (hlist.head, hlist.tail)
+  implicit def string2Path(step: String): Path = Path(NonEmptyList(StringStep(step), List.empty))
+  implicit def int2Path(step: Int): Path = Path(NonEmptyList(IntStep(step), List.empty))
 }

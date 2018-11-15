@@ -1,7 +1,7 @@
 package io.github.methrat0n.restruct.handlers.json
 
 import io.github.methrat0n.restruct.core.data.constraints.Constraint
-import io.github.methrat0n.restruct.core.data.schema.FieldAlgebra
+import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, Path }
 import io.github.methrat0n.restruct.readers.json.JsonReaderInterpreter
 import io.github.methrat0n.restruct.writers.json.JsonWriterInterpreter
 import play.api.libs.json.Format
@@ -11,10 +11,10 @@ trait FieldJsonFormaterInterpreter extends FieldAlgebra[Format] {
   private[this] val writer = JsonWriterInterpreter
   private[this] val reader = JsonReaderInterpreter
 
-  override def required[T](name: String, schema: Format[T], default: Option[T]): Format[T] =
+  override def required[T](path: Path, schema: Format[T], default: Option[T]): Format[T] =
     Format(
-      reader.required(name, schema, default),
-      writer.required(name, schema, default)
+      reader.required(path, schema, default),
+      writer.required(path, schema, default)
     )
 
   override def verifying[T](schema: Format[T], constraint: Constraint[T]): Format[T] =
@@ -47,9 +47,9 @@ trait FieldJsonFormaterInterpreter extends FieldAlgebra[Format] {
       writer.product(fa, fb)
     )
 
-  override def optional[T](name: String, schema: Format[T], default: Option[Option[T]]): Format[Option[T]] =
+  override def optional[T](path: Path, schema: Format[T], default: Option[Option[T]]): Format[Option[T]] =
     Format(
-      reader.optional(name, schema, default),
-      writer.optional(name, schema, default)
+      reader.optional(path, schema, default),
+      writer.optional(path, schema, default)
     )
 }

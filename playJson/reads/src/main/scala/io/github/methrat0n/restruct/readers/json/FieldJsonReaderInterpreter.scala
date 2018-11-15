@@ -1,17 +1,17 @@
 package io.github.methrat0n.restruct.readers.json
 
 import io.github.methrat0n.restruct.core.data.constraints.Constraint
-import io.github.methrat0n.restruct.core.data.schema.FieldAlgebra
-import play.api.libs.json.{ JsPath, JsonValidationError, Reads }
+import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, IntStep, Path, StringStep }
+import play.api.libs.json._
 
 trait FieldJsonReaderInterpreter extends FieldAlgebra[Reads] {
-  override def required[T](name: String, schema: Reads[T], default: Option[T]): Reads[T] =
+  override def required[T](path: Path, schema: Reads[T], default: Option[T]): Reads[T] =
     default
-      .map(default => (JsPath \ name).readWithDefault(default)(schema))
-      .getOrElse((JsPath \ name).read(schema))
+      .map(default => path2JsPath(path).readWithDefault(default)(schema))
+      .getOrElse(path2JsPath(path).read(schema))
 
-  override def optional[T](name: String, schema: Reads[T], default: Option[Option[T]]): Reads[Option[T]] =
-    (JsPath \ name).readNullableWithDefault(default.flatten)(schema)
+  override def optional[T](path: Path, schema: Reads[T], default: Option[Option[T]]): Reads[Option[T]] =
+    path2JsPath(path).readNullableWithDefault(default.flatten)(schema)
 
   override def verifying[T](schema: Reads[T], constraint: Constraint[T]): Reads[T] =
     schema.filter(JsonValidationError(s"error.constraints.${constraint.name}", constraint.args: _*))(constraint.validate)
@@ -27,4 +27,10 @@ trait FieldJsonReaderInterpreter extends FieldAlgebra[Reads] {
   import play.api.libs.functional.syntax._
   override def product[A, B](fa: Reads[A], fb: Reads[B]): Reads[(A, B)] =
     (fa and fb).tupled
+
+  private[this] def path2JsPath(path: Path): JsPath =
+    JsPath(path.steps.toList.map {
+      case StringStep(step) => KeyPathNode(step)
+      case IntStep(step)    => IdxPathNode(step)
+    })
 }

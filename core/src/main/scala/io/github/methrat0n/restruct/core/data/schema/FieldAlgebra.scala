@@ -9,9 +9,9 @@ import language.higherKinds
 trait FieldAlgebra[F[_]] extends ComplexSchemaAlgebra[F]
   with Semigroupal[F] with Invariant[F] with Pure[F] {
 
-  def required[T](name: String, schema: F[T], default: Option[T]): F[T]
+  def required[T](path: Path, schema: F[T], default: Option[T]): F[T]
 
-  def optional[T](name: String, schema: F[T], default: Option[Option[T]]): F[Option[T]]
+  def optional[T](path: Path, schema: F[T], default: Option[Option[T]]): F[Option[T]]
 
   def verifying[T](schema: F[T], constraint: Constraint[T]): F[T]
 
