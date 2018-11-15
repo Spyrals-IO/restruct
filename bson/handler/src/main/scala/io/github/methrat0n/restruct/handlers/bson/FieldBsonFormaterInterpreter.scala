@@ -1,7 +1,7 @@
 package io.github.methrat0n.restruct.handlers.bson
 
 import io.github.methrat0n.restruct.core.data.constraints.Constraint
-import io.github.methrat0n.restruct.core.data.schema.FieldAlgebra
+import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, Path }
 import io.github.methrat0n.restruct.readers.bson.BsonReaderInterpreter
 import io.github.methrat0n.restruct.writers.bson.BsonWriterInterpreter
 
@@ -10,16 +10,16 @@ trait FieldBsonFormaterInterpreter extends FieldAlgebra[BsonHandler] {
   private[this] val reader = BsonReaderInterpreter
   private[this] val writer = BsonWriterInterpreter
 
-  override def optional[T](name: String, schema: BsonHandler[T], default: Option[Option[T]]): BsonHandler[Option[T]] =
+  override def optional[T](path: Path, schema: BsonHandler[T], default: Option[Option[T]]): BsonHandler[Option[T]] =
     BsonHandler(
-      reader.optional[T](name, schema, default).read,
-      writer.optional[T](name, schema, default).write
+      reader.optional[T](path, schema, default).read,
+      writer.optional[T](path, schema, default).write
     )
 
-  override def required[T](name: String, schema: BsonHandler[T], default: Option[T]): BsonHandler[T] =
+  override def required[T](path: Path, schema: BsonHandler[T], default: Option[T]): BsonHandler[T] =
     BsonHandler(
-      reader.required[T](name, schema, default).read,
-      writer.required[T](name, schema, default).write
+      reader.required[T](path, schema, default).read,
+      writer.required[T](path, schema, default).write
     )
 
   override def verifying[T](schema: BsonHandler[T], constraint: Constraint[T]): BsonHandler[T] =

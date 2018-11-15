@@ -1,16 +1,16 @@
 package io.github.methrat0n.restruct.readers.bson
 
 import io.github.methrat0n.restruct.core.data.constraints.Constraint
-import io.github.methrat0n.restruct.core.data.schema.FieldAlgebra
+import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, Path }
 import reactivemongo.bson.{ BSONReader, BSONValue }
 
 trait FieldBsonReaderInterpreter extends FieldAlgebra[BsonReader] {
 
-  override def required[T](name: String, schema: BsonReader[T], default: Option[T]): BsonReader[T] =
-    readDocumentWithDefault(name, schema, default).afterRead(_.get)
+  override def required[T](path: Path, schema: BsonReader[T], default: Option[T]): BsonReader[T] =
+    readDocumentWithDefault(path, schema, default).afterRead(_.get)
 
-  override def optional[T](name: String, schema: BsonReader[T], default: Option[Option[T]]): BsonReader[Option[T]] =
-    readDocumentWithDefault[T](name, schema, default.flatten)
+  override def optional[T](path: Path, schema: BsonReader[T], default: Option[Option[T]]): BsonReader[Option[T]] =
+    readDocumentWithDefault[T](path, schema, default.flatten)
 
   override def verifying[T](schema: BsonReader[T], constraint: Constraint[T]): BsonReader[T] =
     schema.afterRead { parsed =>

@@ -1,7 +1,7 @@
 package io.github.methrat0n.restruct.writers.jsonschema
 
 import io.github.methrat0n.restruct.core.data.constraints.Constraint
-import io.github.methrat0n.restruct.core.data.schema.FieldAlgebra
+import io.github.methrat0n.restruct.core.data.schema._
 import io.github.methrat0n.restruct.writers.json.JsonWriterInterpreter
 import play.api.libs.json._
 
@@ -9,25 +9,17 @@ trait FieldJsonSchemaWriterInterpreter extends FieldAlgebra[JsonSchemaWriter] {
 
   private val writer = JsonWriterInterpreter
 
-  override def required[T](name: String, schema: JsonSchemaWriter[T], default: Option[T]): JsonSchemaWriter[T] =
-    (Json.obj(
-      "type" -> "object",
-      "properties" -> Json.obj(
-        name -> (schema._1 ++ default.map(default =>
-          Json.obj("default" -> schema._2.writes(default))).getOrElse(Json.obj()))
-      ),
-      "required" -> Json.arr(name)
-    ), writer.required(name, schema._2, default))
+  override def required[T](path: Path, schema: JsonSchemaWriter[T], default: Option[T]): JsonSchemaWriter[T] =
+    (
+      path2JsonSchema(path, schema, default, isRequired = true),
+      writer.required(path, schema._2, default)
+    )
 
-  override def optional[T](name: String, schema: JsonSchemaWriter[T], default: Option[Option[T]]): JsonSchemaWriter[Option[T]] =
-    (Json.obj(
-      "type" -> "object",
-      "properties" -> Json.obj(
-        name -> (schema._1 ++ default.flatten.map(default =>
-          Json.obj("default" -> schema._2.writes(default))).getOrElse(Json.obj()))
-      ),
-      "required" -> Json.arr()
-    ), writer.optional(name, schema._2, default))
+  override def optional[T](path: Path, schema: JsonSchemaWriter[T], default: Option[Option[T]]): JsonSchemaWriter[Option[T]] =
+    (
+      path2JsonSchema(path, schema, default.flatten, isRequired = false),
+      writer.optional(path, schema._2, default)
+    )
 
   override def verifying[T](schema: JsonSchemaWriter[T], constraint: Constraint[T]): JsonSchemaWriter[T] =
     (schema._1 ++ Json.obj(
@@ -51,7 +43,8 @@ trait FieldJsonSchemaWriterInterpreter extends FieldAlgebra[JsonSchemaWriter] {
       )
   }, JsonWriterInterpreter.either(fa._2, fb._2))
 
-  override def product[A, B](fa: JsonSchemaWriter[A], fb: JsonSchemaWriter[B]): JsonSchemaWriter[(A, B)] = ???
+  override def product[A, B](fa: JsonSchemaWriter[A], fb: JsonSchemaWriter[B]): JsonSchemaWriter[(A, B)] =
+    (deepMerge(fa._1, fb._1), JsonWriterInterpreter.product(fa._2, fb._2))
 
   override def pure[A](a: A): JsonSchemaWriter[A] =
     (Json.obj(), writer.pure(a))
@@ -66,5 +59,23 @@ trait FieldJsonSchemaWriterInterpreter extends FieldAlgebra[JsonSchemaWriter] {
     case boolean: Boolean => Json.toJson(boolean)
     case other            => JsString(other.toString)
   }
+
+  private def path2JsonSchema[T](path: Path, schema: JsonSchemaWriter[T], maybeDefault: Option[T], isRequired: Boolean): JsObject =
+    path.steps.toList.foldRight(
+      schema._1 ++ maybeDefault.map(default =>
+        Json.obj("default" -> schema._2.writes(default))).getOrElse(JsObject.empty)
+    )((step, acc) => step match {
+        case StringStep(name) => Json.obj(
+          "type" -> "object",
+          "properties" -> Json.obj(
+            name -> acc
+          ),
+          "required" -> (if (isRequired) Json.arr(name) else JsArray.empty)
+        )
+        case IntStep(_) => Json.obj(
+          "type" -> "array",
+          "contains" -> acc
+        )
+      })
 
 }

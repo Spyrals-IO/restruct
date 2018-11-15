@@ -4,133 +4,85 @@ import cats.{ Invariant, Semigroupal }
 import io.github.methrat0n.restruct.core.Program
 import io.github.methrat0n.restruct.core.data.constraints.Constraint
 import io.github.methrat0n.restruct.core.data.schema.FieldAlgebra
-import io.github.methrat0n.restruct.schema.Syntax.{ FieldBuilder1, FieldBuilder2, FieldBuilder3, FieldBuilder4, FieldBuilder5 }
-import shapeless.{ ::, Coproduct, Generic, HNil }
+import io.github.methrat0n.restruct.schema.ProductSchema.{ ProductSchema1, ProductSchema2 }
+import shapeless.{ ::, Generic, HList, HNil }
 
 import scala.language.higherKinds
 
-trait Schema[A] {
+trait SchemaConstructor[TYPE_CONSTRUCTOR[_]] {
+  def of[A](schema: Schema[A]): Schema[TYPE_CONSTRUCTOR[A]]
+}
 
-  protected[schema] def program: Program[FieldAlgebra, A]
-  protected def default: Option[A]
+sealed trait Schema[A] { self =>
 
-  def constrainted(constraint: Constraint[A]): Schema[A] = Schema(new Program[FieldAlgebra, A] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[A] =
-      algebra.verifying(program.run(algebra), constraint)
-  })
+  def constraints: List[Constraint[A]]
 
-  private[schema] def bindName(name: String): FieldSchema[A] = FieldSchema[A](name, new Program[FieldAlgebra, A] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[A] =
-      algebra.required(name, program.run(algebra), default)
-  })
+  def constraintedBy(constraint: Constraint[A]): Schema[A]
 
+  def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[A]
+}
+
+object ProductSchema {
+
+  final case class ProductSchema1[A, Field_1](
+    field1: Field[Field_1],
+    constraints: List[Constraint[A]]
+  )(implicit generic: Generic.Aux[A, Field_1 :: HNil]) extends Schema[A] {
+    def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[A] =
+      field1.program.imap(_ :: HNil)(_.head)
+        .imap(generic.from)(generic.to).run(algebra)
+
+    override def constraintedBy(constraint: Constraint[A]): Schema[A] =
+      copy(constraints = constraints :+ constraint)
+  }
+
+  final case class ProductSchema2[A, Field_1, Field_2](
+    field1: Field[Field_1],
+    field2: Field[Field_2],
+    constraints: List[Constraint[A]]
+  )(implicit
+    semigroupal: Semigroupal[Program[FieldAlgebra, ?]],
+    invariant: Invariant[Program[FieldAlgebra, ?]],
+    generic: Generic.Aux[A, Field_1 :: Field_2 :: HNil]
+  ) extends Schema[A] {
+    def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[A] =
+      field1.program
+        .product(field2.program).imap(firstTuple2ToHlist)(firstHlistToTuple2)
+        .imap(generic.from)(generic.to)
+        .run(algebra)
+
+    override def constraintedBy(constraint: Constraint[A]): Schema[A] =
+      copy(constraints = constraints :+ constraint)
+  }
+
+  private def firstTuple2ToHlist[A, B](tuple: (A, B)): A :: B :: HNil = tuple2ToHlist((tuple._1, tuple._2 :: HNil))
+  private def firstHlistToTuple2[A, B](hlist: A :: B :: HNil): (A, B) = {
+    val tuple = hlistToTuple2(hlist)
+    (tuple._1, tuple._2.head)
+  }
+  private def tuple2ToHlist[A, B <: HList](tuple: (A, B)): A :: B = tuple._1 :: tuple._2
+  private def hlistToTuple2[A, B <: HList](hlist: A :: B): (A, B) = (hlist.head, hlist.tail)
+}
+
+trait TypedSchema[A] extends Schema[A] {
   def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[A] =
     program.run(algebra)
+
+  def program: Program[FieldAlgebra, A]
+
+  override def constraintedBy(constraint: Constraint[A]): Schema[A] = TypedSchema(program, constraints :+ constraint)
 }
 
-trait FieldSchema[A] {
-
-  protected[schema] def program: Program[FieldAlgebra, A]
-  protected def name: String
-
-  def defaultTo(defaultA: A): FieldSchema[A] = FieldSchema[A](name, new Program[FieldAlgebra, A] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[A] =
-      algebra.required(name, program.run(algebra), Some(defaultA))
-  })
-}
-
-trait SchemaConstructor[TYPE_CONSTRUCTOR[_]] {
-  def of[A](reader: Schema[A]): Schema[TYPE_CONSTRUCTOR[A]]
+object TypedSchema {
+  def apply[A](prgram: Program[FieldAlgebra, A], constaints: List[Constraint[A]]): TypedSchema[A] = new TypedSchema[A]() {
+    override def program: Program[FieldAlgebra, A] = prgram
+    override def constraints: List[Constraint[A]] = constaints
+  }
 }
 
 object Schema {
-  def apply[A](prgram: Program[FieldAlgebra, A]): Schema[A] = new Schema[A] {
-    override val program: Program[FieldAlgebra, A] = prgram
-    override val default: Option[A] = None
-  }
-  def apply[A](prgram: Program[FieldAlgebra, A], defaultA: A): Schema[A] = new Schema[A] {
-    override val program: Program[FieldAlgebra, A] = prgram
-    override val default: Option[A] = Some(defaultA)
-  }
+  def apply[Type <: Product, Field_1](field1: Field[Field_1])(implicit generic: Generic.Aux[Type, Field_1 :: HNil]): Schema[Type] = new ProductSchema1[Type, Field_1](field1, List.empty)
+  def apply[Type <: Product, Field_1, Field_2](field1: Field[Field_1], field2: Field[Field_2])(implicit generic: Generic.Aux[Type, Field_1 :: Field_2 :: HNil]): Schema[Type] = new ProductSchema2[Type, Field_1, Field_2](field1, field2, List.empty)
 
-  def is[TYPE <: Product, FIELD_1](builder: FieldBuilder1[FIELD_1])(implicit
-    invariant: Invariant[Program[FieldAlgebra, ?]],
-    generic: Generic.Aux[TYPE, FIELD_1 :: HNil]
-  ): Schema[TYPE] =
-    Schema(builder.build)
-
-  def is[TYPE <: Product, FIELD_1, FIELD_2](builder: FieldBuilder2[FIELD_1, FIELD_2])(implicit
-    semigroupal: Semigroupal[Program[FieldAlgebra, ?]],
-    invariant: Invariant[Program[FieldAlgebra, ?]],
-    generic: Generic.Aux[TYPE, FIELD_1 :: FIELD_2 :: HNil]
-  ): Schema[TYPE] =
-    Schema(builder.build)
-
-  def is[TYPE <: Product, FIELD_1, FIELD_2, FIELD_3](builder: FieldBuilder3[FIELD_1, FIELD_2, FIELD_3])(implicit
-    semigroupal: Semigroupal[Program[FieldAlgebra, ?]],
-    invariant: Invariant[Program[FieldAlgebra, ?]],
-    generic: Generic.Aux[TYPE, FIELD_1 :: FIELD_2 :: FIELD_3 :: HNil]
-  ): Schema[TYPE] =
-    Schema(builder.build)
-
-  def is[TYPE <: Product, FIELD_1, FIELD_2, FIELD_3, FIELD_4](builder: FieldBuilder4[FIELD_1, FIELD_2, FIELD_3, FIELD_4])(implicit
-    semigroupal: Semigroupal[Program[FieldAlgebra, ?]],
-    invariant: Invariant[Program[FieldAlgebra, ?]],
-    generic: Generic.Aux[TYPE, FIELD_1 :: FIELD_2 :: FIELD_3 :: FIELD_4 :: HNil]
-  ): Schema[TYPE] =
-    Schema(builder.build)
-
-  def is[TYPE <: Product, FIELD_1, FIELD_2, FIELD_3, FIELD_4, FIELD_5](builder: FieldBuilder5[FIELD_1, FIELD_2, FIELD_3, FIELD_4, FIELD_5])(implicit
-    semigroupal: Semigroupal[Program[FieldAlgebra, ?]],
-    invariant: Invariant[Program[FieldAlgebra, ?]],
-    generic: Generic.Aux[TYPE, FIELD_1 :: FIELD_2 :: FIELD_3 :: FIELD_4 :: FIELD_5 :: HNil]
-  ): Schema[TYPE] =
-    Schema(builder.build)
-
-  //Coproduct schema construction
-
-  def is[COPRODUCT <: Coproduct, PRODUCT_1 <: COPRODUCT](schema1: Schema[PRODUCT_1]): Schema[COPRODUCT] =
-    schema1.asInstanceOf[Schema[COPRODUCT]]
-
-  def is[COPRODUCT <: Coproduct, PRODUCT_1 <: COPRODUCT, PRODUCT_2 <: COPRODUCT](schema1: Schema[PRODUCT_1], schema2: Schema[PRODUCT_2])(implicit manifest1: Manifest[PRODUCT_1], manifest2: Manifest[PRODUCT_2]): Schema[COPRODUCT] =
-    Schema(new Program[FieldAlgebra, COPRODUCT] {
-      override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[COPRODUCT] = {
-        val f1 = schema1.program.run(algebra)
-        val f2 = schema2.program.run(algebra)
-
-        algebra.imap(algebra.either(f1, f2))({
-          case Right(product) => product
-          case Left(product)  => product
-        })({
-          case product: PRODUCT_2 => Right(product)
-          case product: PRODUCT_1 => Left(product)
-        })
-      }
-    })
-
-  def is[COPRODUCT, PRODUCT_1 <: COPRODUCT, PRODUCT_2 <: COPRODUCT, PRODUCT_3 <: COPRODUCT](schema1: Schema[PRODUCT_1], schema2: Schema[PRODUCT_2], schema3: Schema[PRODUCT_3])(implicit manifest1: Manifest[PRODUCT_1], manifest2: Manifest[PRODUCT_2], manifest3: Manifest[PRODUCT_3]): Schema[COPRODUCT] =
-    Schema(new Program[FieldAlgebra, COPRODUCT] {
-      override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[COPRODUCT] = {
-        val f1 = schema1.program.run(algebra)
-        val f2 = schema2.program.run(algebra)
-        val f3 = schema3.program.run(algebra)
-
-        algebra.imap(algebra.either(f1, algebra.either(f2, f3)))({
-          case Right(Right(product)) => product
-          case Right(Left(product))  => product
-          case Left(product)         => product
-        })({
-          case product: PRODUCT_3 => Right(Right(product))
-          case product: PRODUCT_2 => Right(Left(product))
-          case product: PRODUCT_1 => Left(product)
-        })
-      }
-    })
-}
-
-object FieldSchema {
-  def apply[A](nme: String, prog: Program[FieldAlgebra, A]): FieldSchema[A] = new FieldSchema[A] {
-    override protected val name: String = nme
-    override def program: Program[FieldAlgebra, A] = prog
-  }
+  def apply[Type](program: Program[FieldAlgebra, Type]): Schema[Type] = TypedSchema(program, List.empty)
 }
