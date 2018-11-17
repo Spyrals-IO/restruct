@@ -2,6 +2,7 @@
 lazy val core = (project in file("./core"))
   .settings(commonSettings: _*)
   .settings(addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"))
+  .enablePlugins(spray.boilerplate.BoilerplatePlugin)
   .settings(libraryDependencies ++= coreDependencies)
   .settings(name := "restruct-core")
 
