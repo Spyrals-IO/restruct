@@ -1,10 +1,11 @@
 package io.github.methrat0n.restruct.schema
 
-import cats.{ Invariant, Semigroupal }
+import cats.data.NonEmptyList
+import cats.{Invariant, Semigroupal}
 import io.github.methrat0n.restruct.core.Program
-import io.github.methrat0n.restruct.core.data.constraints.Constraint
-import io.github.methrat0n.restruct.core.data.schema.FieldAlgebra
-import shapeless.{ ::, Generic, HNil }
+import io.github.methrat0n.restruct.core.data.constraints.{Constraint, Constraints}
+import io.github.methrat0n.restruct.core.data.schema.{FieldAlgebra, Path, StringStep}
+import shapeless.{::, Generic, HNil}
 
 import scala.language.higherKinds
 
@@ -18,21 +19,97 @@ sealed trait Schema[A] {
   def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[A]
 }
 
+sealed trait StrictSchema[A] extends Schema[A] {
+  import io.github.methrat0n.restruct.schema.Syntax.string
+  import io.github.methrat0n.restruct.schema.Schema.ProductSchema1
+  protected val typeField: RequiredField[String] = RequiredField(Path(NonEmptyList(StringStep("__type"), List.empty)), string, None)
+  protected val typeSchema: String => Schema[String] = typeName => ProductSchema1(typeField, List(Constraints.EqualConstraint(typeName)))(new Generic[String] {
+      override type Repr = String :: HNil
+
+      override def to(t: String): Repr = t :: HNil
+
+      override def from(r: Repr): String = r.head
+    })
+}
+
+object StrictSchema {
+  final case class StrictCoproductSchema1[Type, Product_1 <: Type](
+      product1: Schema[Product_1],
+      constraints: List[Constraint[Type]]
+    )(implicit
+      manifest1: Manifest[Product_1]
+    ) extends StrictSchema[Type] {
+      override def constraintedBy(constraint: Constraint[Type]): Schema[Type] =
+        copy(constraints = constraints :+ constraint)
+
+      import cats.implicits._
+      override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Type] = {
+        (
+          typeSchema(manifest1.runtimeClass.getSimpleName).bind(algebra),
+          product1.bind(algebra)
+        ).imapN((_, product) => product)(product => (manifest1.runtimeClass.getSimpleName, product))(algebra, algebra)
+          .asInstanceOf[FORMAT[Type]]
+      }
+    }
+
+  [2..5#final case class StrictCoproductSchema1[Type, [#Product_1 <: Type#]](
+    [#product1: Schema[Product_1],#
+    ]
+    constraints: List[Constraint[Type]]
+  )(implicit
+    [#manifest1: Manifest[Product_1],#
+    ]
+  ) extends StrictSchema[Type] {
+    override def constraintedBy(constraint: Constraint[Type]): Schema[Type] =
+      copy(constraints = constraints :+ constraint)
+
+    import cats.implicits._
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Type] = {
+    [#
+    val format1 = (
+      typeSchema(manifest1.runtimeClass.getSimpleName).bind(algebra),
+      product1.bind(algebra)
+    ).imapN((_, product) => product)(product => (manifest1.runtimeClass.getSimpleName, product))(algebra, algebra)
+    #
+    ]
+
+      algebra.imap(
+        [#algebra.either(format1#], algebra.pure(())[# #)])
+      )({
+        case Left(product)  => product
+        [2..#case [2..#Right(# ]Left(product)[2..# #)]) => product#
+        ]
+        case [#Right(# ]_: Unit[# #)]) => throw new RuntimeException("unable to find a matching schema") //TODO better error message
+      })({
+        [#case product: Product_1 => [2..#Right(# ]Left(product)[# #)]#
+        ]
+      })
+    }
+  }
+  #
+  ]
+
+  [..5#def apply[Type, [#Product_1 <: Type#]]([#schema1: Schema[Product_1]#])(implicit [#manifest1: Manifest[Product_1]#]): Schema[Type] = StrictCoproductSchema1([#schema1#], List.empty)#
+  ]
+}
+
 object Schema {
+
+  sealed trait ProductSchema[A] extends Schema[A]
 
   final case class ProductSchema1[A, Field_1](
     field1: Field[Field_1],
     constraints: List[Constraint[A]]
-  )(implicit generic: Generic.Aux[A, Field_1 :: HNil]) extends Schema[A] {
+  )(implicit generic: Generic.Aux[A, Field_1 :: HNil]) extends ProductSchema[A] {
     def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[A] =
-      field1.program.imap(_ :: HNil)(_.head)
-        .imap(generic.from)(generic.to).run(algebra)
+      algebra.verifying(field1.program.imap(_ :: HNil)(_.head)
+        .imap(generic.from)(generic.to).run(algebra), constraints)
 
     override def constraintedBy(constraint: Constraint[A]): Schema[A] =
       copy(constraints = constraints :+ constraint)
   }
 
-[2..50#
+[2..5#
   final case class ProductSchema1[A, [#Field_1#]](
     [#field1: Field[Field_1],#
     ]
@@ -41,7 +118,7 @@ object Schema {
     semigroupal: Semigroupal[Program[FieldAlgebra, ?]],
     invariant: Invariant[Program[FieldAlgebra, ?]],
     generic: Generic.Aux[A, [#Field_1# :: ] :: HNil]
-  ) extends Schema[A] {
+  ) extends ProductSchema[A] {
     def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[A] =
       field##1.program
         .product(field##2.program)
@@ -55,6 +132,32 @@ object Schema {
       copy(constraints = constraints :+ constraint)
   }
 #
+]
+[2..5#
+  final case class CoproductSchema1[Type, [#Product_1 <: Type#]](
+    [#product1: Schema[Product_1],#
+    ]
+    constraints: List[Constraint[Type]]
+  )(implicit
+    [#manifest1: Manifest[Product_1]#,
+    ]
+  ) extends Schema[Type] {
+    override def constraintedBy(constraint: Constraint[Type]): Schema[Type] =
+      copy(constraints = constraints :+ constraint)
+
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Type] =
+      algebra.imap(
+        [#algebra.either(product1.bind(algebra)#], algebra.pure(())[# #)])
+      )({
+        case Left(product)  => product
+        [2..#case [2..#Right(# ]Left(product)[2..# #)]) => product#
+        ]
+        case [#Right(# ]_: Unit[# #)]) => throw new RuntimeException("unable to find a matching schema") //TODO better error message
+      })({
+        [#case product: Product_1 => [2..#Right(# ]Left(product)[# #)]#
+        ]
+      })
+  }#
 ]
 
   trait TypedSchema[A] extends Schema[A] {
@@ -73,8 +176,12 @@ object Schema {
     }
   }
 
-  [..50#def apply[Type <: Product, [#Field_1#]]([#field1: Field[Field_1]#])(implicit generic: Generic.Aux[Type,[#Field_1# :: ] :: HNil]): Schema[Type] = new ProductSchema1[Type, [#Field_1#]]([#field1#], List.empty)#
+  [..5#def apply[Type <: Product, [#Field_1#]]([#field1: Field[Field_1]#])(implicit generic: Generic.Aux[Type,[#Field_1# :: ] :: HNil]): Schema[Type] = new ProductSchema1[Type, [#Field_1#]]([#field1#], List.empty)#
   ]
 
-    def apply[Type](program: Program[FieldAlgebra, Type]): Schema[Type] = TypedSchema(program, List.empty)
+  def apply[Type, Product_1 <: Type](schema1: Schema[Product_1]): Schema[Type] = schema1.asInstanceOf[Schema[Type]]
+  [2..5#def apply[Type, [#Product_1 <: Type#]]([#schema1: Schema[Product_1]#])(implicit [#manifest1: Manifest[Product_1]#]): Schema[Type] = CoproductSchema1([#schema1#], List.empty)#
+  ]
+
+  def apply[Type](program: Program[FieldAlgebra, Type]): Schema[Type] = TypedSchema(program, List.empty)
 }

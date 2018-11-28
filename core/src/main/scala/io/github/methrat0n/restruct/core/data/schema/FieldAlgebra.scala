@@ -4,7 +4,7 @@ import alleycats.Pure
 import cats.{ Invariant, Semigroupal }
 import io.github.methrat0n.restruct.core.data.constraints.Constraint
 
-import language.higherKinds
+import scala.language.higherKinds
 
 trait FieldAlgebra[F[_]] extends ComplexSchemaAlgebra[F]
   with Semigroupal[F] with Invariant[F] with Pure[F] {

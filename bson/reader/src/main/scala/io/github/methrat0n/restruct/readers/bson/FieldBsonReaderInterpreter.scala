@@ -35,5 +35,4 @@ trait FieldBsonReaderInterpreter extends FieldAlgebra[BsonReader] {
       fa.asInstanceOf[BSONReader[BSONValue, A]].read(value),
       fb.asInstanceOf[BSONReader[BSONValue, B]].read(value)
     ))
-
 }
