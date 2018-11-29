@@ -3,6 +3,7 @@ package restruct.examples
 import play.api.libs.json.{ Json, Reads }
 import io.github.methrat0n.restruct.schema.{ Schema, StrictSchema }
 import io.github.methrat0n.restruct.readers.json.JsonReaderInterpreter
+import io.github.methrat0n.schema.Schemas
 
 object SyntaxExample extends App {
 
@@ -17,6 +18,7 @@ object SyntaxExample extends App {
       ("names" \ "lastName").as(string).defaultTo("merlin"),
       ("names" \ "firstName").asOption(string)
     )
+    implicit lazy val autoSchema: Schema[Person] = Schemas.of[Person]
     val jsonReader = JsonReaderInterpreter
     lazy val reads: Reads[Person] = schema.bind(jsonReader)
   }

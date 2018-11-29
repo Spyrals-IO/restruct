@@ -36,4 +36,5 @@ object Dependencies {
     val version = "0.16.0" //TODO retro
     val reactive = "org.reactivemongo" %% "reactivemongo" % version //TODO should work, or do something specific for basic mongo
   }
+
 }
