@@ -8,7 +8,7 @@ lazy val core = (project in file("./core"))
 
 lazy val scalaReflect = Def.setting { "org.scala-lang" % "scala-reflect" % "2.12.4" }
 lazy val macros = (project in file("./macros"))
-  .settings(commonSettings: _*)
+  .settings(macroSettings: _*)
   .settings(addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"))
   .settings(libraryDependencies ++= macrosDependencies)
   .settings(libraryDependencies += scalaReflect.value)
@@ -80,9 +80,21 @@ lazy val examples = (project in file("./examples"))
   .dependsOn(core, format, macros)
 
 
-lazy val commonSettings =
-  Settings.scala.commonSettings ++
+lazy val macroSettings =
+  Seq(
+    scalaOrganization := Settings.scala.scalaOrganization,
+    scalaVersion := Settings.scala.version,
+    scalacOptions := Settings.scala.scalacOptions
+  ) ++
   scalariformCommonSettings
+
+lazy val commonSettings =
+  Seq(
+    scalaOrganization := Settings.scala.scalaOrganization,
+    scalaVersion := Settings.scala.version,
+    scalacOptions := Settings.scala.scalacOptions ++ Settings.scala.unsused
+  ) ++
+    scalariformCommonSettings
 
 lazy val coreDependencies = Seq(
   Dependencies.cats.core,

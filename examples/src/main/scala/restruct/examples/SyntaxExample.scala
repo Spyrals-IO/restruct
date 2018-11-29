@@ -14,21 +14,20 @@ object SyntaxExample extends App {
 
   object Person {
     import io.github.methrat0n.restruct.schema.Syntax._
-    implicit lazy val schema: Schema[Person] = Schema(
+    /*implicit lazy val schema: Schema[Person] = Schema(
       ("names" \ "lastName").as(string).defaultTo("merlin"),
       ("names" \ "firstName").asOption(string)
-    )
+    )*/
     implicit lazy val autoSchema: Schema[Person] = Schemas.of[Person]
     val jsonReader = JsonReaderInterpreter
-    lazy val reads: Reads[Person] = schema.bind(jsonReader)
+    lazy val reads: Reads[Person] = autoSchema.bind(jsonReader)
   }
 
   val goodJson =
     """
-      |{ "names": {
+      |{
       |  "lastName": "goulet",
       |  "firstName": "merlin"
-      |  }
       |}
     """.stripMargin
 
