@@ -1,4 +1,8 @@
 
+lazy val root = (project in file("."))
+  .settings(commonSettings: _*)
+  .aggregate(core, jsonSchema, playJson, enumeratum, bson)
+
 lazy val core = (project in file("./core"))
   .settings(commonSettings: _*)
   .settings(addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"))
@@ -8,7 +12,7 @@ lazy val core = (project in file("./core"))
 
 lazy val scalaReflect = Def.setting { "org.scala-lang" % "scala-reflect" % "2.12.4" }
 lazy val macros = (project in file("./macros"))
-  .settings(macroSettings: _*)
+  .settings(commonSettings: _*)
   .settings(addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"))
   .settings(libraryDependencies ++= macrosDependencies)
   .settings(libraryDependencies += scalaReflect.value)
@@ -77,24 +81,13 @@ lazy val bsonHandler = (project in file("./bson/handler"))
 lazy val examples = (project in file("./examples"))
   .settings(commonSettings: _*)
   .settings(name := "restruct-examples")
-  .dependsOn(core, format, macros)
-
-
-lazy val macroSettings =
-  Seq(
-    scalaOrganization := Settings.scala.scalaOrganization,
-    scalaVersion := Settings.scala.version,
-    scalacOptions := Settings.scala.scalacOptions
-  ) ++
-  scalariformCommonSettings
+  .dependsOn(core, playJson)
 
 lazy val commonSettings =
-  Seq(
-    scalaOrganization := Settings.scala.scalaOrganization,
-    scalaVersion := Settings.scala.version,
-    scalacOptions := Settings.scala.scalacOptions ++ Settings.scala.unsused
-  ) ++
-    scalariformCommonSettings
+  Settings.scala.commonSettings ++
+  scalariformCommonSettings ++
+  releaseSettings ++
+  publishSettings
 
 lazy val coreDependencies = Seq(
   Dependencies.cats.core,
@@ -134,4 +127,35 @@ lazy val scalariformCommonSettings = Seq(
     .setPreference(DanglingCloseParenthesis, Force)
     .setPreference(IndentLocalDefs, true)
     .setPreference(NewlineAtEndOfFile, true)
+)
+
+import ReleaseTransformations._
+lazy val username = "Methrat0n"
+lazy val repo = "restruct"
+lazy val releaseSettings = Seq(
+  releaseProcess := Seq[ReleaseStep](
+    inquireVersions,
+    runTest,
+    setReleaseVersion,
+    commitReleaseVersion,
+    tagRelease,
+    releaseStepCommand("publishSigned"),
+    setNextVersion,
+    commitNextVersion
+  )
+)
+
+lazy val publishSettings = Seq(
+  homepage := Some(url(s"https://github.com/$username/$repo")),
+  scmInfo := Some(ScmInfo(url(s"https://github.com/$username/$repo"), s"git@github.com:$username/$repo.git")),
+  developers := List(
+    Developer(
+      id = username,
+      name = "Merlin Goulet",
+      email = "merlingoulet@live.com",
+      url = new URL(s"http://github.com/$username")
+    )
+  ),
+  publishMavenStyle := true,
+  publishTo := Some(if (isSnapshot.value) Opts.resolver.sonatypeSnapshots else Opts.resolver.sonatypeStaging)
 )

@@ -10,65 +10,65 @@ import scala.language.higherKinds
 
 object Syntax {
 
-  implicit val string: Schema[String] = Schema(new Program[FieldAlgebra, String] {
+  implicit val string: Schema[String] = TypedSchema(new Program[FieldAlgebra, String] {
     override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[String] =
       algebra.stringSchema
   })
-  implicit val decimal: Schema[Double] = Schema(new Program[FieldAlgebra, Double] {
+  implicit val decimal: Schema[Double] = TypedSchema(new Program[FieldAlgebra, Double] {
     override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Double] =
       algebra.decimalSchema
   })
-  implicit val integer: Schema[Int] = Schema(new Program[FieldAlgebra, Int] {
+  implicit val integer: Schema[Int] = TypedSchema(new Program[FieldAlgebra, Int] {
     override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Int] =
       algebra.integerSchema
   })
-  implicit val boolean: Schema[Boolean] = Schema(new Program[FieldAlgebra, Boolean] {
+  implicit val boolean: Schema[Boolean] = TypedSchema(new Program[FieldAlgebra, Boolean] {
     override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Boolean] =
       algebra.booleanSchema
   })
-  implicit val char: Schema[Char] = Schema(new Program[FieldAlgebra, Char] {
+  implicit val char: Schema[Char] = TypedSchema(new Program[FieldAlgebra, Char] {
     override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Char] =
       algebra.charSchema
   })
-  implicit val byte: Schema[Byte] = Schema(new Program[FieldAlgebra, Byte] {
+  implicit val byte: Schema[Byte] = TypedSchema(new Program[FieldAlgebra, Byte] {
     override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Byte] =
       algebra.byteSchema
   })
-  implicit val short: Schema[Short] = Schema(new Program[FieldAlgebra, Short] {
+  implicit val short: Schema[Short] = TypedSchema(new Program[FieldAlgebra, Short] {
     override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Short] =
       algebra.shortSchema
   })
-  implicit val float: Schema[Float] = Schema(new Program[FieldAlgebra, Float] {
+  implicit val float: Schema[Float] = TypedSchema(new Program[FieldAlgebra, Float] {
     override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Float] =
       algebra.floatSchema
   })
-  implicit val bigDecimal: Schema[BigDecimal] = Schema(new Program[FieldAlgebra, BigDecimal] {
+  implicit val bigDecimal: Schema[BigDecimal] = TypedSchema(new Program[FieldAlgebra, BigDecimal] {
     override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[BigDecimal] =
       algebra.bigDecimalSchema
   })
-  implicit val long: Schema[Long] = Schema(new Program[FieldAlgebra, Long] {
+  implicit val long: Schema[Long] = TypedSchema(new Program[FieldAlgebra, Long] {
     override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Long] =
       algebra.longSchema
   })
-  implicit val bigInt: Schema[BigInt] = Schema(new Program[FieldAlgebra, BigInt] {
+  implicit val bigInt: Schema[BigInt] = TypedSchema(new Program[FieldAlgebra, BigInt] {
     override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[BigInt] =
       algebra.bigIntSchema
   })
-  implicit val dateTime: Schema[ZonedDateTime] = Schema(new Program[FieldAlgebra, ZonedDateTime] {
+  implicit val dateTime: Schema[ZonedDateTime] = TypedSchema(new Program[FieldAlgebra, ZonedDateTime] {
     override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[ZonedDateTime] =
       algebra.dateTimeSchema
   })
-  implicit val time: Schema[LocalTime] = Schema(new Program[FieldAlgebra, LocalTime] {
+  implicit val time: Schema[LocalTime] = TypedSchema(new Program[FieldAlgebra, LocalTime] {
     override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[LocalTime] =
       algebra.timeSchema
   })
-  implicit val date: Schema[LocalDate] = Schema(new Program[FieldAlgebra, LocalDate] {
+  implicit val date: Schema[LocalDate] = TypedSchema(new Program[FieldAlgebra, LocalDate] {
     override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[LocalDate] =
       algebra.dateSchema
   })
 
   val list: SchemaConstructor[List] = new SchemaConstructor[List] {
-    override def of[A](reader: Schema[A]): Schema[List[A]] = Schema[List[A]](new Program[FieldAlgebra, List[A]] {
+    override def of[A](reader: Schema[A]): Schema[List[A]] = TypedSchema[List[A]](new Program[FieldAlgebra, List[A]] {
       override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[List[A]] =
         algebra.many(reader.bind(algebra))
     })

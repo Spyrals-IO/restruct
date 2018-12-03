@@ -1,0 +1,52 @@
+package io.github.methrat0n.restruct.schema
+
+import cats.{Invariant, Semigroupal}
+import io.github.methrat0n.restruct.core.Program
+import io.github.methrat0n.restruct.core.data.constraints.Constraint
+import io.github.methrat0n.restruct.core.data.schema.FieldAlgebra
+import shapeless.{Generic, ::, HNil}
+
+import scala.language.higherKinds
+
+sealed trait ProductSchema[A] extends Schema[A]
+
+object ProductSchema {
+
+  final case class ProductSchema1[A, Field_1](
+    field1: Field[Field_1],
+    constraints: List[Constraint[A]]
+  )(implicit generic: Generic.Aux[A, Field_1 :: HNil]) extends ProductSchema[A] {
+    def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[A] =
+      algebra.verifying(field1.program.imap(_ :: HNil)(_.head)
+        .imap(generic.from)(generic.to).run(algebra), constraints)
+
+    override def constraintedBy(constraint: Constraint[A]): Schema[A] =
+      copy(constraints = constraints :+ constraint)
+  }
+
+[2..5#
+  final case class ProductSchema1[A, [#Field_1#]](
+    [#field1: Field[Field_1],#
+    ]
+    constraints: List[Constraint[A]]
+  )(implicit
+    semigroupal: Semigroupal[Program[FieldAlgebra, ?]],
+    invariant: Invariant[Program[FieldAlgebra, ?]],
+    generic: Generic.Aux[A, [#Field_1# :: ] :: HNil]
+  ) extends ProductSchema[A] {
+    def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[A] =
+      algebra.verifying(field##1.program
+        .product(field##2.program)
+        [3..#.product(field1.program)#
+        ]
+        .imap { case [# #(]field##1, [2..#field1#), ]) => [#field1# :: ] :: HNil }(hlist => [# #(]hlist.head, [2..#hlist.[2..#tail#.].head#), ]))
+        .imap(generic.from)(generic.to)
+        .run(algebra), constraints)
+
+    override def constraintedBy(constraint: Constraint[A]): Schema[A] =
+      copy(constraints = constraints :+ constraint)
+  }
+#
+]
+
+}

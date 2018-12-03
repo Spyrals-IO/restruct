@@ -12,11 +12,6 @@ object Dependencies {
     val enum = "com.beachape" % "enumeratum_2.12" % version
   }
 
-  object refined {
-    val version = "0.9.0" //TODO minimify
-    val core = "eu.timepit" %% "refined" % version
-  }
-
   object test {
     val version = "3.0.5"
     val scalaTest = "org.scalatest" % "scalatest_2.12" % version

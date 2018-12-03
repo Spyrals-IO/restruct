@@ -7,7 +7,7 @@ object Schemas {
   import scala.reflect.macros.blackbox
   def of[Type]: Schema[Type] = macro ofImpl[Type]
 
-  private def ofImpl[T: c.WeakTypeTag](c: blackbox.Context): c.Expr[Schema[T]] = {
+  def ofImpl[T: c.WeakTypeTag](c: blackbox.Context): c.Expr[Schema[T]] = {
     import c.universe._
 
       def inferSchema(typ: Type): Tree =
@@ -40,13 +40,13 @@ object Schemas {
           q"io.github.methrat0n.restruct.schema.RequiredField[$typName](io.github.methrat0n.restruct.core.data.schema.Path(cats.data.NonEmptyList(io.github.methrat0n.restruct.core.data.schema.StringStep($fieldName), List.empty)), $treeSchema, None)"
       }
       val productName = TypeName(s"ProductSchema${fieldsTree.size.toString}")
-      val schemaTree = q"new io.github.methrat0n.restruct.schema.Schema.$productName(..$fieldsTree, List.empty)"
+      val schemaTree = q"new io.github.methrat0n.restruct.schema.ProductSchema.$productName(..$fieldsTree, List.empty)"
       c.Expr(c.untypecheck(schemaTree)).asInstanceOf[c.Expr[Schema[T]]]
     }
     else if (isCoproduct(tag.tpe.typeSymbol)) {
-      val schemas = tag.tpe.typeSymbol.asClass.knownDirectSubclasses.map( childClass => inferSchema(childClass.asType.toType))
+      val schemas = tag.tpe.typeSymbol.asClass.knownDirectSubclasses.map(childClass => inferSchema(childClass.asType.toType))
       val productName = TypeName(s"CoproductSchema${schemas.size.toString}")
-      val schemaTree = q"new io.github.methrat0n.restruct.schema.Schema.$productName(..$schemas, List.empty)"
+      val schemaTree = q"new io.github.methrat0n.restruct.schema.CoproductSchema.$productName(..$schemas, List.empty)"
       c.Expr(c.untypecheck(schemaTree)).asInstanceOf[c.Expr[Schema[T]]]
     }
     else {

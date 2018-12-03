@@ -2,7 +2,7 @@ package io.github.methrat0n.restruct.writers.bson
 
 import io.github.methrat0n.restruct.core.data.constraints.Constraint
 import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, IntStep, Path, StringStep }
-import reactivemongo.bson.{ BSONArray, BSONDocument, BSONWriter }
+import reactivemongo.bson.{ BSONArray, BSONDocument, BSONValue, BSONWriter }
 
 trait FieldBsonWriterInterpreter extends FieldAlgebra[BsonWriter] {
 
@@ -38,7 +38,7 @@ trait FieldBsonWriterInterpreter extends FieldAlgebra[BsonWriter] {
     case Left(a)  => fa.write(a)
   })
 
-  override def product[A, B](fa: BsonWriter[A], fb: BsonWriter[B]): BsonWriter[(A, B)] = BsonWriter({
+  override def product[A, B](fa: BsonWriter[A], fb: BsonWriter[B]): BsonWriter[(A, B)] = BsonWriter[(A, B), BSONValue]({
     case (a, b) => (fa.write(a), fb.write(b)) match {
       case (bsonA: BSONDocument, bsonB: BSONDocument) => bsonA.merge(bsonB)
       case (bsonA: BSONArray, bsonB: BSONArray)       => bsonA.merge(bsonB)
