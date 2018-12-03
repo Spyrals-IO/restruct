@@ -44,11 +44,11 @@ object StrictSchema {
 
       import cats.implicits._
       override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Type] = {
-        (
+        algebra.verifying((
           typeSchema(manifest1.runtimeClass.getSimpleName).bind(algebra),
           product1.bind(algebra)
         ).imapN((_, product) => product)(product => (manifest1.runtimeClass.getSimpleName, product))(algebra, algebra)
-          .asInstanceOf[FORMAT[Type]]
+          .asInstanceOf[FORMAT[Type]], constraints)
       }
     }
 
@@ -73,7 +73,7 @@ object StrictSchema {
     #
     ]
 
-      algebra.imap(
+      algebra.verifying(algebra.imap(
         [#algebra.either(format1#], algebra.pure(())[# #)])
       )({
         case Left(product)  => product
@@ -83,7 +83,7 @@ object StrictSchema {
       })({
         [#case product: Product_1 => [2..#Right(# ]Left(product)[# #)]#
         ]
-      })
+      }), constraints)
     }
   }
   #
@@ -120,13 +120,13 @@ object Schema {
     generic: Generic.Aux[A, [#Field_1# :: ] :: HNil]
   ) extends ProductSchema[A] {
     def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[A] =
-      field##1.program
+      algebra.verifying(field##1.program
         .product(field##2.program)
         [3..#.product(field1.program)#
         ]
         .imap { case [# #(]field##1, [2..#field1#), ]) => [#field1# :: ] :: HNil }(hlist => [# #(]hlist.head, [2..#hlist.[2..#tail#.].head#), ]))
         .imap(generic.from)(generic.to)
-        .run(algebra)
+        .run(algebra), constraints)
 
     override def constraintedBy(constraint: Constraint[A]): Schema[A] =
       copy(constraints = constraints :+ constraint)
@@ -146,7 +146,7 @@ object Schema {
       copy(constraints = constraints :+ constraint)
 
     override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Type] =
-      algebra.imap(
+      algebra.verifying(algebra.imap(
         [#algebra.either(product1.bind(algebra)#], algebra.pure(())[# #)])
       )({
         case Left(product)  => product
@@ -156,7 +156,7 @@ object Schema {
       })({
         [#case product: Product_1 => [2..#Right(# ]Left(product)[# #)]#
         ]
-      })
+      }), constraints)
   }#
 ]
 
