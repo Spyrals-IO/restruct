@@ -73,8 +73,8 @@ final case class BadUser(name: String, age: Int) extends User
 object User {
   import io.github.methrat0n.restruct.schema.Syntax._
   val goodUserSchema: Schema[GoodUser] = Schema(
-    "name".as(string),
-    "age".as(integer)
+    "name".as[String],
+    "age".as[Int]
   )
   val badUserSchema: Schema[BadUser] = Schema(
     "name".as(string),

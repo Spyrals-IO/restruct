@@ -9,9 +9,9 @@ final case class Path(steps: NonEmptyList[Step]) {
     Path(NonEmptyList(steps.head, steps.tail :+ StringStep(step)))
   def \(step: Int): Path =
     Path(NonEmptyList(steps.head, steps.tail :+ IntStep(step)))
-  def as[A](schema: Schema[A]): RequiredField[A] =
+  def as[A](implicit schema: Schema[A]): RequiredField[A] =
     RequiredField(this, schema, None)
-  def asOption[A](schema: Schema[A]): OptionalField[A] =
+  def asOption[A](implicit schema: Schema[A]): OptionalField[A] =
     OptionalField(this, schema, None)
 }
 
