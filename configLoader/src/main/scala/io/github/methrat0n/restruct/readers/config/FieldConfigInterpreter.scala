@@ -1,19 +1,22 @@
 package io.github.methrat0n.restruct.readers.config
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigException}
+import play.api.{ConfigLoader, Configuration}
 import io.github.methrat0n.restruct.core.data.constraints.Constraint
 import io.github.methrat0n.restruct.core.data.schema.{FieldAlgebra, Path}
-import play.api.{ConfigLoader, Configuration}
+import io.github.methrat0n.restruct.core.data.schema.{IntStep, StringStep}
 
 import scala.util.Try
 
 trait FieldConfigInterpreter extends FieldAlgebra[ConfigLoader] {
-  override def required[T](path: Path, schema: ConfigLoader[T], default: Option[T]): ConfigLoader[T] = (config: Config, configPath: String) =>
-      default.map(dft => new Configuration(config).getOptional[T](s"$configPath.$path")(schema).getOrElse(dft))
-        .getOrElse(new Configuration(config).get[T](s"$configPath.$path")(schema))
+  override def required[T](path: Path, schema: ConfigLoader[T], default: Option[T]): ConfigLoader[T] = (config: Config, configPath: String) => {
+    val configuration = buildConfigurationFromPath(path, config, configPath)
+    default.map(dft => configuration.getOptional[T]("")(schema).getOrElse(dft))
+      .getOrElse(configuration.get[T]("")(schema))
+  }
 
   override def optional[T](path: Path, schema: ConfigLoader[T], default: Option[Option[T]]): ConfigLoader[Option[T]] = (config: Config, configPath: String) =>
-    new Configuration(config).getOptional[T](s"$configPath.$path")(schema) orElse default.flatten
+    buildConfigurationFromPath(path, config, configPath).getOptional[T]("")(schema) orElse default.flatten
 
   override def verifying[T](schema: ConfigLoader[T], constraint: Constraint[T]): ConfigLoader[T] = (config: Config, configPath: String) => {
     val configuration = Configuration(config)
@@ -45,4 +48,27 @@ trait FieldConfigInterpreter extends FieldAlgebra[ConfigLoader] {
 
   override def pure[A](a: A): ConfigLoader[A] = (config: Config, configPath: String) =>
     a
+
+  import collection.JavaConverters._
+  private def buildConfigurationFromPath(path: Path, config: Config, rootPath: String) =
+    Configuration(path.steps.tail.foldLeft(path.steps.head match {
+      case StringStep(step) =>
+        config.getConfig(s"$rootPath.$step")
+      case IntStep(step) =>
+        try {
+          config.getConfigList(rootPath).asScala(step)
+        } catch {
+          case _: ConfigException.WrongType => throw new Configuration(config).reportError(rootPath, "no array found in path")
+          case _: IndexOutOfBoundsException => throw new Configuration(config).reportError(rootPath, s"no element at $step")
+        }
+    })((acc, step) => step match {
+      case StringStep(string) => acc.getConfig(string)
+      case IntStep(int) =>
+        try {
+          config.getConfigList("").asScala(int)
+        } catch {
+          case _: ConfigException.WrongType => throw new Configuration(config).reportError("", "no array found in path")
+          case _: IndexOutOfBoundsException => throw new Configuration(config).reportError("", s"no element at $step")
+        }
+    }))
 }
