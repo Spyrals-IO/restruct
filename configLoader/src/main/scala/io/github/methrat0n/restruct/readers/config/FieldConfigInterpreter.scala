@@ -1,10 +1,10 @@
 package io.github.methrat0n.restruct.readers.config
 
-import com.typesafe.config.{Config, ConfigException}
-import play.api.{ConfigLoader, Configuration}
+import com.typesafe.config.{ Config, ConfigException }
+import play.api.{ ConfigLoader, Configuration }
 import io.github.methrat0n.restruct.core.data.constraints.Constraint
-import io.github.methrat0n.restruct.core.data.schema.{FieldAlgebra, Path}
-import io.github.methrat0n.restruct.core.data.schema.{IntStep, StringStep}
+import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, Path }
+import io.github.methrat0n.restruct.core.data.schema.{ IntStep, StringStep }
 
 import scala.util.Try
 
@@ -21,7 +21,7 @@ trait FieldConfigInterpreter extends FieldAlgebra[ConfigLoader] {
   override def verifying[T](schema: ConfigLoader[T], constraint: Constraint[T]): ConfigLoader[T] = (config: Config, configPath: String) => {
     val configuration = Configuration(config)
     val value = schema.load(config, configPath)
-    if(constraint.validate(value)) value
+    if (constraint.validate(value)) value
     else throw configuration.reportError(configPath, s"Constraint ${constraint.name} check failed for $value", None)
   }
 
@@ -30,7 +30,7 @@ trait FieldConfigInterpreter extends FieldAlgebra[ConfigLoader] {
       case Some(a) => Left(a)
       case None => Try { fb.load(config, configPath) }.toOption match {
         case Some(b) => Right(b)
-        case None => throw new Configuration(config).reportError(configPath, s"Cannot load this config using neither $fa nor $fb", None)
+        case None    => throw new Configuration(config).reportError(configPath, s"Cannot load this config using neither $fa nor $fb", None)
       }
     }
   }
@@ -57,7 +57,8 @@ trait FieldConfigInterpreter extends FieldAlgebra[ConfigLoader] {
       case IntStep(step) =>
         try {
           config.getConfigList(rootPath).asScala(step)
-        } catch {
+        }
+        catch {
           case _: ConfigException.WrongType => throw new Configuration(config).reportError(rootPath, "no array found in path")
           case _: IndexOutOfBoundsException => throw new Configuration(config).reportError(rootPath, s"no element at $step")
         }
@@ -66,7 +67,8 @@ trait FieldConfigInterpreter extends FieldAlgebra[ConfigLoader] {
       case IntStep(int) =>
         try {
           config.getConfigList("").asScala(int)
-        } catch {
+        }
+        catch {
           case _: ConfigException.WrongType => throw new Configuration(config).reportError("", "no array found in path")
           case _: IndexOutOfBoundsException => throw new Configuration(config).reportError("", s"no element at $step")
         }

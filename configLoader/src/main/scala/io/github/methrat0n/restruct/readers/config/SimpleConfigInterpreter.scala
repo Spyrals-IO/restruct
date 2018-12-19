@@ -1,11 +1,11 @@
 package io.github.methrat0n.restruct.readers.config
 
-import java.time.{LocalDate, LocalTime, ZonedDateTime}
+import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 
 import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
 import play.api.ConfigLoader
 
-trait SimpleConfigInterpreter extends SimpleSchemaAlgebra[ConfigLoader]{
+trait SimpleConfigInterpreter extends SimpleSchemaAlgebra[ConfigLoader] {
   override def charSchema: ConfigLoader[Char] =
     ConfigLoader.stringLoader.map(_.charAt(0))
 
