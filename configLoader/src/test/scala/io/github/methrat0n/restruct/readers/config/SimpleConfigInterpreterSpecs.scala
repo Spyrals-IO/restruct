@@ -9,12 +9,11 @@ import play.api.{ ConfigLoader, Configuration }
 class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
   private val configuration = Configuration(ConfigFactory.load("test.conf"))
 
-  println(configuration)
   behavior of "ConfigLoader for strings"
 
   import io.github.methrat0n.restruct.schema.Syntax.string
 
-  "stringLoader" should "find a ConfigLoader for strings" in {
+  "ConfigLoader" should "find a loader for strings" in {
     string.bind(configLoader)
   }
   it should "load string without any change" in {
@@ -39,7 +38,7 @@ class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
 
   import io.github.methrat0n.restruct.schema.Syntax.decimal
 
-  "stringLoader" should "find a ConfigLoader for decimals" in {
+  "ConfigLoader" should "find a loader for decimals" in {
     decimal.bind(configLoader)
   }
   it should "load decimal" in {
@@ -64,7 +63,7 @@ class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
 
   import io.github.methrat0n.restruct.schema.Syntax.integer
 
-  "ConfigLoader" should "find a configLoader for integers" in {
+  "ConfigLoader" should "find a loader for integers" in {
     integer.bind(configLoader)
   }
   it should "load integer" in {
