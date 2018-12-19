@@ -67,12 +67,10 @@ object Syntax {
       algebra.dateSchema
   })
 
-  val list: SchemaConstructor[List] = new SchemaConstructor[List] {
-    override def of[A](reader: Schema[A]): Schema[List[A]] = TypedSchema[List[A]](new Program[FieldAlgebra, List[A]] {
-      override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[List[A]] =
-        algebra.many(reader.bind(algebra))
-    })
-  }
+  implicit def list[T](implicit schema: Schema[T]): Schema[List[T]] = TypedSchema[List[T]](new Program[FieldAlgebra, List[T]] {
+    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[List[T]] =
+      algebra.many(schema.bind(algebra))
+  })
 
   import scala.language.implicitConversions
 

@@ -8,10 +8,6 @@ import shapeless.{::, Generic, HNil}
 
 import scala.language.higherKinds
 
-trait SchemaConstructor[TYPE_CONSTRUCTOR[_]] {
-  def of[A](schema: Schema[A]): Schema[TYPE_CONSTRUCTOR[A]]
-}
-
 trait Schema[A] {
   def constraints: List[Constraint[A]]
   def constraintedBy(constraint: Constraint[A]): Schema[A]
