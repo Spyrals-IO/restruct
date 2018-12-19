@@ -1,30 +1,22 @@
 package io.github.methrat0n.restruct.schema
 
-import io.github.methrat0n.restruct.core.Program
 import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, Path }
 
 import language.higherKinds
 
-sealed trait Field[Type] {
+sealed trait Field[Type] extends Schema[Type] {
   def path: Path
   def default: Option[Type]
   def defaultTo(default: Type): Field[Type]
-  def program: Program[FieldAlgebra, Type]
 }
 
-final case class OptionalField[Type](path: Path, schema: Schema[Type], default: Option[Option[Type]]) extends Field[Option[Type]] {
-  override val program: Program[FieldAlgebra, Option[Type]] = new Program[FieldAlgebra, Option[Type]] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Option[Type]] =
-      algebra.optional(path, schema.bind(algebra), default)
-  }
-
+final case class OptionalField[Type](path: Path, part: Schema[Type], default: Option[Option[Type]]) extends Field[Option[Type]] {
   override def defaultTo(default: Option[Type]): Field[Option[Type]] = copy(default = Some(default))
+  override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Option[Type]] =
+    algebra.optional[Type](path, part.bind(algebra), default)
 }
-final case class RequiredField[Type](path: Path, schema: Schema[Type], default: Option[Type]) extends Field[Type] {
-  override def program: Program[FieldAlgebra, Type] = new Program[FieldAlgebra, Type] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Type] =
-      algebra.required(path, schema.bind(algebra), default)
-  }
-
+final case class RequiredField[Type](path: Path, part: Schema[Type], default: Option[Type]) extends Field[Type] {
   override def defaultTo(default: Type): Field[Type] = copy(default = Some(default))
+  override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Type] =
+    algebra.required(path, part.bind(algebra), default)
 }

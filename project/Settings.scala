@@ -14,7 +14,7 @@ object Settings {
         "-unchecked",
         "-feature",
         "-Ywarn-value-discard",
-        "-Ywarn-unused",
+        //"-Ywarn-unused",
         "-Ypartial-unification",
         "-Ywarn-infer-any",
         "-Xcheckinit",

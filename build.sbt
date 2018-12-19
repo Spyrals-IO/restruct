@@ -6,7 +6,7 @@ lazy val root = (project in file("."))
 lazy val core = (project in file("./core"))
   .settings(commonSettings: _*)
   .settings(addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"))
-  .enablePlugins(spray.boilerplate.BoilerplatePlugin)
+  .settings(libraryDependencies += scalaReflect.value)
   .settings(libraryDependencies ++= coreDependencies)
   .settings(name := "restruct-core")
 
@@ -87,7 +87,7 @@ lazy val configLoader = (project in file("./configLoader"))
 lazy val examples = (project in file("./examples"))
   .settings(commonSettings: _*)
   .settings(name := "restruct-examples")
-  .dependsOn(core, playJson)
+  .dependsOn(core, reads, macros)
 
 lazy val commonSettings =
   Settings.scala.commonSettings ++
@@ -139,7 +139,7 @@ lazy val scalariformCommonSettings = Seq(
     .setPreference(NewlineAtEndOfFile, true)
 )
 
-import ReleaseTransformations._
+import sbtrelease.ReleasePlugin.autoImport.ReleaseTransformations._
 lazy val username = "Methrat0n"
 lazy val repo = "restruct"
 lazy val releaseSettings = Seq(

@@ -1,27 +1,10 @@
 package restruct.examples
 
-import play.api.libs.json.{ Json, Reads }
-import io.github.methrat0n.restruct.schema.{ Schema, StrictSchema }
 import io.github.methrat0n.restruct.readers.json.JsonReaderInterpreter
-import io.github.methrat0n.schema.Schemas
+import io.github.methrat0n.restruct.schema.{ Schema, StrictSchema }
+import play.api.libs.json.Json
 
 object SyntaxExample extends App {
-
-  final case class Person(
-    lastName: String,
-    firstName: Option[String]
-  )
-
-  object Person {
-    import io.github.methrat0n.restruct.schema.Syntax._
-    /*implicit lazy val schema: Schema[Person] = Schema(
-      ("names" \ "lastName").as(string).defaultTo("merlin"),
-      ("names" \ "firstName").asOption(string)
-    )*/
-    implicit lazy val autoSchema: Schema[Person] = Schemas.of[Person]
-    val jsonReader = JsonReaderInterpreter
-    lazy val reads: Reads[Person] = autoSchema.bind(jsonReader)
-  }
 
   val goodJson =
     """
@@ -38,27 +21,22 @@ object SyntaxExample extends App {
       |}
     """.stripMargin
 
-  Person.reads.reads(Json.parse(goodJson)) match {
+  val goodUserJson =
+    """
+      |{
+      |  "name": "merlin",
+      |  "age": 24,
+      |  "__type": "BadUser"
+      |}
+    """.stripMargin
+
+  User.schema.bind(JsonReaderInterpreter).reads(Json.parse(goodUserJson)) match {
     case play.api.libs.json.JsSuccess(value, _) => println(value)
     case play.api.libs.json.JsError(errors)     => println(errors)
   }
 
   import io.github.methrat0n.restruct.schema.Syntax._
   bigInt.bind(JsonReaderInterpreter).reads(Json.parse("111")) match {
-    case play.api.libs.json.JsSuccess(value, _) => println(value)
-    case play.api.libs.json.JsError(errors)     => println(errors)
-  }
-
-  val goodUserJson =
-    """
-      |{
-      |  "name": "merlin",
-      |  "age": 24,
-      |  "__type": "GoodUser"
-      |}
-    """.stripMargin
-
-  User.strictSchema.bind(JsonReaderInterpreter).reads(Json.parse(goodUserJson)) match {
     case play.api.libs.json.JsSuccess(value, _) => println(value)
     case play.api.libs.json.JsError(errors)     => println(errors)
   }
@@ -72,20 +50,16 @@ final case class BadUser(name: String, age: Int) extends User
 
 object User {
   import io.github.methrat0n.restruct.schema.Syntax._
-  val goodUserSchema: Schema[GoodUser] = Schema(
-    "name".as[String],
-    "age".as[Int]
-  )
-  val badUserSchema: Schema[BadUser] = Schema(
-    "name".as(string),
-    "age".as(integer)
-  )
-  val schema: Schema[User] = Schema(
-    goodUserSchema,
-    badUserSchema
-  )
-  val strictSchema: Schema[User] = StrictSchema(
-    goodUserSchema,
-    badUserSchema
+  val goodUserSchema: Schema[GoodUser] =
+    "name".as[String] and
+      "age".as[Int]
+
+  val badUserSchema: Schema[BadUser] =
+    "name".as(string) and
+      "age".as(integer)
+
+  val schema: Schema[User] = StrictSchema(
+    goodUserSchema or
+      badUserSchema
   )
 }
