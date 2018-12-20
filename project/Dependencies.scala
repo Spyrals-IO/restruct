@@ -32,4 +32,8 @@ object Dependencies {
     val reactive = "org.reactivemongo" %% "reactivemongo" % version //TODO should work, or do something specific for basic mongo
   }
 
+  object play {
+    val version = "2.6.0"
+    val play = "com.typesafe.play" %% "play" % version
+  }
 }

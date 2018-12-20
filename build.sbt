@@ -78,6 +78,12 @@ lazy val bsonHandler = (project in file("./bson/handler"))
   .settings(name := "restruct-bson-handler-schema")
   .dependsOn(core, bsonReader, bsonWriter)
 
+lazy val configLoader = (project in file("./configLoader"))
+  .settings(commonSettings: _*)
+  .settings(libraryDependencies ++= configLoaderDependencies)
+  .settings(name := "restruct-config-loader")
+  .dependsOn(core)
+
 lazy val examples = (project in file("./examples"))
   .settings(commonSettings: _*)
   .settings(name := "restruct-examples")
@@ -112,6 +118,10 @@ lazy val bsonDependencies = Seq(
   Dependencies.mongo.reactive,
   Dependencies.cats.core,
   Dependencies.cats.alley,
+)
+
+lazy val configLoaderDependencies = Seq(
+  Dependencies.play.play
 )
 
 lazy val macrosDependencies = Seq(
