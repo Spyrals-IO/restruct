@@ -3,13 +3,12 @@ package io.github.methrat0n.restruct.readers.config
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{ FlatSpec, Matchers }
 import play.api.{ ConfigLoader, Configuration }
+import io.github.methrat0n.restruct.schema.Syntax._
 
 class ComplexConfigInterpreterSpecs extends FlatSpec with Matchers {
   private val configuration = Configuration(ConfigFactory.load("test.conf"))
 
   behavior of "ConfigLoader for mutliple elements"
-
-  import io.github.methrat0n.restruct.schema.Syntax._
 
   "ConfigLoader" should "find a loader for multiple strings" in {
     list(string).bind(configLoader)

@@ -7,5 +7,5 @@ import collection.JavaConverters._
 
 trait ComplexConfigInterpreter extends ComplexSchemaAlgebra[ConfigLoader] {
   override def many[T](schema: ConfigLoader[T]): ConfigLoader[List[T]] = (config: Config, configPath: String) =>
-    config.getList(configPath).asScala.toList.map(value => schema.load(value.atPath("value"), "value"))
+    config.getList(configPath).asScala.toList.map(value => schema.load(value.atPath("|||value|||"), "|||value|||"))
 }
