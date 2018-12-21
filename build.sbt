@@ -72,8 +72,14 @@ lazy val bsonHandler = (project in file("./bson/handler"))
 
 lazy val configLoader = (project in file("./configLoader"))
   .settings(commonSettings: _*)
-  .settings(libraryDependencies ++= configLoaderDependencies)
+  .settings(libraryDependencies += Dependencies.play.play)
   .settings(name := "restruct-config-loader")
+  .dependsOn(core)
+
+lazy val queryStringBindable = (project in file("./queryStringBindable"))
+  .settings(commonSettings: _*)
+  .settings(libraryDependencies += Dependencies.play.play)
+  .settings(name := "restruct-query-string-bindable")
   .dependsOn(core)
 
 lazy val examples = (project in file("./examples"))
