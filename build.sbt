@@ -1,5 +1,5 @@
 
-lazy val root = (project in file("."))
+lazy val restruct = (project in file("."))
   .settings(commonSettings: _*)
   .aggregate(core, jsonSchema, playJson, enumeratum, bson)
 
@@ -88,36 +88,24 @@ lazy val commonSettings =
   publishSettings
 
 lazy val coreDependencies = Seq(
-  Dependencies.cats.core,
-  Dependencies.cats.alley,
   Dependencies.test.scalaTest,
-  Dependencies.shapeless.shapeless
+  Dependencies.cats.core
 )
 
 lazy val playJsonDependencies = Seq(
   Dependencies.json.play,
-  Dependencies.cats.core,
-  Dependencies.cats.alley,
 )
 
 lazy val enumeratumDependencies = Seq(
   Dependencies.enumeratum.enum,
-  Dependencies.cats.core,
-  Dependencies.cats.alley,
 )
 
 lazy val bsonDependencies = Seq(
   Dependencies.mongo.reactive,
-  Dependencies.cats.core,
-  Dependencies.cats.alley,
 )
 
 lazy val configLoaderDependencies = Seq(
   Dependencies.play.play
-)
-
-lazy val macrosDependencies = Seq(
-  Dependencies.test.scalaTest
 )
 
 import scalariform.formatter.preferences._
