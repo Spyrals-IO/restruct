@@ -15,6 +15,13 @@ final case class Path(steps: NonEmptyList[Step]) {
     OptionalField(this, schema, None)
 }
 
+object Path {
+  def \(step: String): Path =
+    Path(NonEmptyList(StringStep(step), List.empty))
+  def \(step: Int): Path =
+    Path(NonEmptyList(IntStep(step), List.empty))
+}
+
 sealed trait Step
 
 final case class StringStep(step: String) extends Step

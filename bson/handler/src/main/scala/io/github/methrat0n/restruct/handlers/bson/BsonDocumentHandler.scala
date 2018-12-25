@@ -1,11 +1,10 @@
 package io.github.methrat0n.restruct.handlers.bson
 
+import io.github.methrat0n.restruct.schema.Schema
 import reactivemongo.bson.{ BSONDocument, BSONDocumentHandler }
-import io.github.methrat0n.restruct.core.Program
-import io.github.methrat0n.restruct.core.data.schema.ComplexSchemaAlgebra
 
 object BsonDocumentHandler {
-  def run[T](program: Program[ComplexSchemaAlgebra, T]): BSONDocumentHandler[T] = {
+  def run[T](program: Schema[T]): BSONDocumentHandler[T] = {
     val handler = BsonFormaterInterpreter.run(program)
     BSONDocumentHandler[T](
       handler.read, handler.write _ andThen {

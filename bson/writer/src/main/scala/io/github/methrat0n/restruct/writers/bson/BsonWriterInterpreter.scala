@@ -1,8 +1,7 @@
 package io.github.methrat0n.restruct.writers.bson
 
-import io.github.methrat0n.restruct.core.Program
-import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
+import io.github.methrat0n.restruct.schema.Schema
 
 object BsonWriterInterpreter extends SimpleBsonWriterInterpreter with ComplexBsonWriterInterpreter with FieldBsonWriterInterpreter {
-  def run[T](program: Program[SimpleSchemaAlgebra, T]): BsonWriter[T] = program.run[BsonWriter](this)
+  def run[T](program: Schema[T]): BsonWriter[T] = program.bind[BsonWriter](this)
 }

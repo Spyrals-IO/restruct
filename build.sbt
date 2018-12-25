@@ -1,23 +1,15 @@
 
-lazy val root = (project in file("."))
+lazy val restruct = (project in file("."))
   .settings(commonSettings: _*)
   .aggregate(core, jsonSchema, playJson, enumeratum, bson)
 
+lazy val scalaReflect = Def.setting { "org.scala-lang" % "scala-reflect" % "2.12.4" }
 lazy val core = (project in file("./core"))
   .settings(commonSettings: _*)
   .settings(addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"))
-  .enablePlugins(spray.boilerplate.BoilerplatePlugin)
+  .settings(libraryDependencies += scalaReflect.value)
   .settings(libraryDependencies ++= coreDependencies)
   .settings(name := "restruct-core")
-
-lazy val scalaReflect = Def.setting { "org.scala-lang" % "scala-reflect" % "2.12.4" }
-lazy val macros = (project in file("./macros"))
-  .settings(commonSettings: _*)
-  .settings(addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"))
-  .settings(libraryDependencies ++= macrosDependencies)
-  .settings(libraryDependencies += scalaReflect.value)
-  .settings(name := "restruct-macros")
-  .dependsOn(core)
 
 lazy val jsonSchema = (project in file("./jsonSchema"))
   .settings(commonSettings: _*)
@@ -87,7 +79,7 @@ lazy val configLoader = (project in file("./configLoader"))
 lazy val examples = (project in file("./examples"))
   .settings(commonSettings: _*)
   .settings(name := "restruct-examples")
-  .dependsOn(core, playJson)
+  .dependsOn(core, reads)
 
 lazy val commonSettings =
   Settings.scala.commonSettings ++
@@ -96,36 +88,24 @@ lazy val commonSettings =
   publishSettings
 
 lazy val coreDependencies = Seq(
-  Dependencies.cats.core,
-  Dependencies.cats.alley,
   Dependencies.test.scalaTest,
-  Dependencies.shapeless.shapeless
+  Dependencies.cats.core
 )
 
 lazy val playJsonDependencies = Seq(
   Dependencies.json.play,
-  Dependencies.cats.core,
-  Dependencies.cats.alley,
 )
 
 lazy val enumeratumDependencies = Seq(
   Dependencies.enumeratum.enum,
-  Dependencies.cats.core,
-  Dependencies.cats.alley,
 )
 
 lazy val bsonDependencies = Seq(
   Dependencies.mongo.reactive,
-  Dependencies.cats.core,
-  Dependencies.cats.alley,
 )
 
 lazy val configLoaderDependencies = Seq(
   Dependencies.play.play
-)
-
-lazy val macrosDependencies = Seq(
-  Dependencies.test.scalaTest
 )
 
 import scalariform.formatter.preferences._
@@ -139,7 +119,7 @@ lazy val scalariformCommonSettings = Seq(
     .setPreference(NewlineAtEndOfFile, true)
 )
 
-import ReleaseTransformations._
+import sbtrelease.ReleasePlugin.autoImport.ReleaseTransformations._
 lazy val username = "Methrat0n"
 lazy val repo = "restruct"
 lazy val releaseSettings = Seq(

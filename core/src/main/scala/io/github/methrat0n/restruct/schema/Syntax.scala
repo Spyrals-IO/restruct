@@ -2,78 +2,79 @@ package io.github.methrat0n.restruct.schema
 
 import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 
-import cats.data.NonEmptyList
-import io.github.methrat0n.restruct.core.Program
-import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, IntStep, Path, StringStep }
+import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, Path }
 
 import scala.language.higherKinds
 
 object Syntax {
 
-  implicit val string: Schema[String] = TypedSchema(new Program[FieldAlgebra, String] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[String] =
+  implicit val string: Schema[String] = new Schema[String] {
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[String] =
       algebra.stringSchema
-  })
-  implicit val decimal: Schema[Double] = TypedSchema(new Program[FieldAlgebra, Double] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Double] =
+  }
+  implicit val decimal: Schema[Double] = new Schema[Double] {
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Double] =
       algebra.decimalSchema
-  })
-  implicit val integer: Schema[Int] = TypedSchema(new Program[FieldAlgebra, Int] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Int] =
+  }
+  implicit val integer: Schema[Int] = new Schema[Int] {
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Int] =
       algebra.integerSchema
-  })
-  implicit val boolean: Schema[Boolean] = TypedSchema(new Program[FieldAlgebra, Boolean] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Boolean] =
+  }
+  implicit val boolean: Schema[Boolean] = new Schema[Boolean] {
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Boolean] =
       algebra.booleanSchema
-  })
-  implicit val char: Schema[Char] = TypedSchema(new Program[FieldAlgebra, Char] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Char] =
+  }
+  implicit val char: Schema[Char] = new Schema[Char] {
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Char] =
       algebra.charSchema
-  })
-  implicit val byte: Schema[Byte] = TypedSchema(new Program[FieldAlgebra, Byte] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Byte] =
+  }
+  implicit val byte: Schema[Byte] = new Schema[Byte] {
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Byte] =
       algebra.byteSchema
-  })
-  implicit val short: Schema[Short] = TypedSchema(new Program[FieldAlgebra, Short] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Short] =
+  }
+  implicit val short: Schema[Short] = new Schema[Short] {
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Short] =
       algebra.shortSchema
-  })
-  implicit val float: Schema[Float] = TypedSchema(new Program[FieldAlgebra, Float] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Float] =
+  }
+  implicit val float: Schema[Float] = new Schema[Float] {
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Float] =
       algebra.floatSchema
-  })
-  implicit val bigDecimal: Schema[BigDecimal] = TypedSchema(new Program[FieldAlgebra, BigDecimal] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[BigDecimal] =
+  }
+  implicit val bigDecimal: Schema[BigDecimal] = new Schema[BigDecimal] {
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[BigDecimal] =
       algebra.bigDecimalSchema
-  })
-  implicit val long: Schema[Long] = TypedSchema(new Program[FieldAlgebra, Long] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[Long] =
+  }
+  implicit val long: Schema[Long] = new Schema[Long] {
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Long] =
       algebra.longSchema
-  })
-  implicit val bigInt: Schema[BigInt] = TypedSchema(new Program[FieldAlgebra, BigInt] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[BigInt] =
+  }
+  implicit val bigInt: Schema[BigInt] = new Schema[BigInt] {
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[BigInt] =
       algebra.bigIntSchema
-  })
-  implicit val dateTime: Schema[ZonedDateTime] = TypedSchema(new Program[FieldAlgebra, ZonedDateTime] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[ZonedDateTime] =
+  }
+  implicit val dateTime: Schema[ZonedDateTime] = new Schema[ZonedDateTime] {
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[ZonedDateTime] =
       algebra.dateTimeSchema
-  })
-  implicit val time: Schema[LocalTime] = TypedSchema(new Program[FieldAlgebra, LocalTime] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[LocalTime] =
+  }
+  implicit val time: Schema[LocalTime] = new Schema[LocalTime] {
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[LocalTime] =
       algebra.timeSchema
-  })
-  implicit val date: Schema[LocalDate] = TypedSchema(new Program[FieldAlgebra, LocalDate] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[LocalDate] =
+  }
+  implicit val date: Schema[LocalDate] = new Schema[LocalDate] {
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[LocalDate] =
       algebra.dateSchema
-  })
+  }
 
-  implicit def list[T](implicit schema: Schema[T]): Schema[List[T]] = TypedSchema[List[T]](new Program[FieldAlgebra, List[T]] {
-    override def run[F[_]](implicit algebra: FieldAlgebra[F]): F[List[T]] =
+  def list[T](implicit schema: Schema[T]): Schema[List[T]] = new Schema[List[T]] {
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[List[T]] =
       algebra.many(schema.bind(algebra))
-  })
+  }
 
-  import scala.language.implicitConversions
+  import language.implicitConversions
+  import language.experimental.macros
 
-  implicit def string2Path(step: String): Path = Path(NonEmptyList(StringStep(step), List.empty))
-  implicit def int2Path(step: Int): Path = Path(NonEmptyList(IntStep(step), List.empty))
+  implicit def string2Path(step: String): Path = Path \ step
+  implicit def int2Path(step: Int): Path = Path \ step
+  implicit def compositeSchema2ComplexSchema[Typ, Composition](schema: Schema[Composition]): Schema[Typ] = macro Impl.simple[Typ, Composition]
+
 }

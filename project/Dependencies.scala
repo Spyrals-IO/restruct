@@ -4,7 +4,6 @@ object Dependencies {
   object cats {
     val version = "1.0.1" //TODO minimify
     val core = "org.typelevel" %% "cats-core" % version
-    val alley = "org.typelevel" %% "alleycats-core" % version
   }
 
   object enumeratum {
@@ -20,11 +19,6 @@ object Dependencies {
   object json {
     val version = "2.6.7" //TODO minimify and retro
     val play = "com.typesafe.play" %% "play-json" % version
-  }
-
-  object shapeless {
-    val version = "2.3.3" //TODO minimify
-    val shapeless = "com.chuusai" %% "shapeless" % version
   }
 
   object mongo {
