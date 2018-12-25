@@ -30,7 +30,7 @@ object SyntaxExample extends App {
       |}
     """.stripMargin
 
-  User.schema.bind(JsonReaderInterpreter).reads(Json.parse(goodUserJson)) match {
+  User.autoSchema.bind(JsonReaderInterpreter).reads(Json.parse(goodUserJson)) match {
     case play.api.libs.json.JsSuccess(value, _) => println(value)
     case play.api.libs.json.JsError(errors)     => println(errors)
   }
@@ -50,11 +50,11 @@ final case class BadUser(name: String, age: Int) extends User
 
 object User {
   import io.github.methrat0n.restruct.schema.Syntax._
-  val goodUserSchema: Schema[GoodUser] =
+  implicit val goodUserSchema: Schema[GoodUser] =
     "name".as[String] and
       "age".as[Int]
 
-  val badUserSchema: Schema[BadUser] =
+  implicit val badUserSchema: Schema[BadUser] =
     "name".as(string) and
       "age".as(integer)
 
@@ -62,4 +62,8 @@ object User {
     goodUserSchema or
       badUserSchema
   )
+
+  val goodUserAutoSchema = Schema.of[GoodUser]
+
+  val autoSchema = StrictSchema.of[User]
 }

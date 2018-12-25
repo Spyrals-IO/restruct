@@ -3,21 +3,13 @@ lazy val root = (project in file("."))
   .settings(commonSettings: _*)
   .aggregate(core, jsonSchema, playJson, enumeratum, bson)
 
+lazy val scalaReflect = Def.setting { "org.scala-lang" % "scala-reflect" % "2.12.4" }
 lazy val core = (project in file("./core"))
   .settings(commonSettings: _*)
   .settings(addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"))
   .settings(libraryDependencies += scalaReflect.value)
   .settings(libraryDependencies ++= coreDependencies)
   .settings(name := "restruct-core")
-
-lazy val scalaReflect = Def.setting { "org.scala-lang" % "scala-reflect" % "2.12.4" }
-lazy val macros = (project in file("./macros"))
-  .settings(commonSettings: _*)
-  .settings(addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"))
-  .settings(libraryDependencies ++= macrosDependencies)
-  .settings(libraryDependencies += scalaReflect.value)
-  .settings(name := "restruct-macros")
-  .dependsOn(core)
 
 lazy val jsonSchema = (project in file("./jsonSchema"))
   .settings(commonSettings: _*)
@@ -87,7 +79,7 @@ lazy val configLoader = (project in file("./configLoader"))
 lazy val examples = (project in file("./examples"))
   .settings(commonSettings: _*)
   .settings(name := "restruct-examples")
-  .dependsOn(core, reads, macros)
+  .dependsOn(core, reads)
 
 lazy val commonSettings =
   Settings.scala.commonSettings ++
