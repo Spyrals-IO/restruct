@@ -31,7 +31,8 @@ class SimpleQueryStringBindableInterpreterSpecs extends FlatSpec with Matchers {
     "date" -> Seq("2018-12-26")
   )
 
-  val allTypes = ListBuffer("string", "double", "int", "boolean", "char", "byte", "short", "float", "bigDecimal", "long", "bigInt", "dateTime", "time", "date")
+  val allTypes = ListBuffer[String]()
+  query.keys.copyToBuffer(allTypes)
 
   private def shouldBeAnError[T](found: Option[Either[String, T]]) = found match {
     case Some(Left(_)) => Succeeded
