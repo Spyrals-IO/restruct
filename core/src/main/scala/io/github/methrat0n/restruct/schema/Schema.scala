@@ -23,6 +23,11 @@ trait Schema[A] { self =>
     override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Either[A, B]] =
       algebra.either(self.bind(algebra), schema.bind(algebra))
   }
+
+  def inmap[B](f: A => B)(g: B => A): Schema[B] = new Schema[B] {
+    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[B] =
+      algebra.imap(self.bind(algebra))(f)(g)
+  }
 }
 
 object Schema {
