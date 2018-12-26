@@ -14,19 +14,25 @@ trait FieldQueryStringBindableInterpreter extends FieldAlgebra[QueryStringBindab
       }
 
     override def unbind(key: String, value: T): String =
-      schema.unbind(key, value)
+      path.steps.toList match {
+        case List(StringStep(step)) => schema.unbind(step, value)
+        case _                      => throw new RuntimeException("Query string does not support path other than a single string")
+      }
   }
 
   //All bindable are optional so this one look strange
   override def optional[T](path: Path, schema: QueryStringBindable[T], default: Option[Option[T]]): QueryStringBindable[Option[T]] = new QueryStringBindable[Option[T]] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, Option[T]]] =
       path.steps.toList match {
-        case List(StringStep(step)) => schema.bind(step, params).map(_.map(Some(_).asInstanceOf[Option[T]])) orElse default.map(Right.apply)
+        case List(StringStep(step)) => schema.bind(step, params).map(_.map(Some(_).asInstanceOf[Option[T]])) orElse default.map(Right.apply) orElse Some(Right(None))
         case _                      => throw new RuntimeException("Query string does not support path other than a single string")
       }
 
     override def unbind(key: String, value: Option[T]): String =
-      schema.unbind(key, value.get)
+      path.steps.toList match {
+        case List(StringStep(step)) => schema.unbind(step, (value orElse default.flatten).get)
+        case _                      => throw new RuntimeException("Query string does not support path other than a single string")
+      }
   }
 
   override def verifying[T](schema: QueryStringBindable[T], constraint: Constraint[T]): QueryStringBindable[T] = new QueryStringBindable[T] {

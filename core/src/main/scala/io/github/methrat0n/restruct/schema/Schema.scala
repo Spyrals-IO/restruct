@@ -54,14 +54,15 @@ object Impl {
     val typTag = implicitly[c.WeakTypeTag[Typ]]
     val compositionTag = implicitly[c.WeakTypeTag[Composition]]
 
-    def buildParts(part: Type): List[Type] = {
-      val args = part.typeArgs
-      if (args.isEmpty) List(part)
-      else buildParts(args(1)) :+ args.head
-    }
-    val parts = buildParts(compositionTag.tpe)
-
     if (isProduct(typTag.tpe)) {
+
+      def buildParts(part: Type): List[Type] = {
+        val args = part.typeArgs
+        if (!(part.typeConstructor =:= typeOf[(_, _)].typeConstructor) || args.isEmpty) List(part)
+        else buildParts(args(1)) :+ args.head
+      }
+      val parts = buildParts(compositionTag.tpe)
+
       val fieldsTypes = typTag.tpe.decls.sorted.collect {
         case m: TermSymbol if m.isVal && m.isCaseAccessor => m.infoIn(typTag.tpe)
       }
@@ -107,6 +108,14 @@ object Impl {
       """)
     }
     else if (isCoproduct(typTag.tpe.typeSymbol)) {
+
+      def buildParts(part: Type): List[Type] = {
+        val args = part.typeArgs
+        if (!(part.typeConstructor =:= typeOf[Either[_, _]].typeConstructor) || args.isEmpty) List(part)
+        else buildParts(args(1)) :+ args.head
+      }
+      val parts = buildParts(compositionTag.tpe)
+
       val typSubtypes = typTag.tpe.typeSymbol.asClass.knownDirectSubclasses.map(childClass => childClass.asType.toType)
 
       if(typSubtypes.isEmpty)
