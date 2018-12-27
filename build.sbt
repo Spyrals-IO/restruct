@@ -1,7 +1,8 @@
 
 lazy val restruct = (project in file("."))
   .settings(commonSettings: _*)
-  .aggregate(core, jsonSchema, playJson, enumeratum, bson)
+  .settings(name := "restruct-all")
+  .aggregate(core, jsonSchema, playJson, enumeratum, bson, configLoader, queryStringBindable)
 
 lazy val scalaReflect = Def.setting { "org.scala-lang" % "scala-reflect" % "2.12.4" }
 lazy val core = (project in file("./core"))
@@ -42,32 +43,32 @@ lazy val format = (project in file("./playJson/format"))
 lazy val enumeratum = (project in file("./enumeratum"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= enumeratumDependencies)
-  .settings(name := "restruct-enumeratum-schema")
+  .settings(name := "restruct-enumeratum")
   .dependsOn(core)
 
 lazy val bson = (project in file("./bson"))
   .settings(commonSettings: _*)
-  .settings(name := "restruct-bson-schema")
+  .settings(name := "restruct-bson")
   .aggregate(bsonReader, bsonWriter, bsonHandler)
 
 lazy val bsonReader = (project in file("./bson/reader"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= bsonDependencies)
   .settings(addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"))
-  .settings(name := "restruct-bson-reader-schema")
+  .settings(name := "restruct-bson-reader")
   .dependsOn(core)
 
 lazy val bsonWriter = (project in file("./bson/writer"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= bsonDependencies)
   .settings(addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"))
-  .settings(name := "restruct-bson-writer-schema")
+  .settings(name := "restruct-bson-writer")
   .dependsOn(core)
 
 lazy val bsonHandler = (project in file("./bson/handler"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= bsonDependencies)
-  .settings(name := "restruct-bson-handler-schema")
+  .settings(name := "restruct-bson-handler")
   .dependsOn(core, bsonReader, bsonWriter)
 
 lazy val configLoader = (project in file("./configLoader"))
@@ -89,9 +90,7 @@ lazy val examples = (project in file("./examples"))
 
 lazy val commonSettings =
   Settings.scala.commonSettings ++
-  scalariformCommonSettings ++
-  releaseSettings ++
-  publishSettings
+  scalariformCommonSettings
 
 lazy val coreDependencies = Seq(
   Dependencies.test.scalaTest
@@ -124,33 +123,41 @@ lazy val scalariformCommonSettings = Seq(
     .setPreference(NewlineAtEndOfFile, true)
 )
 
-import sbtrelease.ReleasePlugin.autoImport.ReleaseTransformations._
-lazy val username = "Methrat0n"
-lazy val repo = "restruct"
-lazy val releaseSettings = Seq(
-  releaseProcess := Seq[ReleaseStep](
-    inquireVersions,
-    runTest,
-    setReleaseVersion,
-    commitReleaseVersion,
-    tagRelease,
-    releaseStepCommand("publishSigned"),
-    setNextVersion,
-    commitNextVersion
+ThisBuild / organization := "io.github.methrat0n"
+ThisBuild / organizationName := "methrat0n"
+ThisBuild / organizationHomepage := Some(url("http://io.github.methrat0n"))
+
+ThisBuild / scmInfo := Some(
+  ScmInfo(
+    url("https://github.com/methrat0n/restruct"),
+    "scm:git@github.com:methrat0n/restruct.git"
+  )
+)
+ThisBuild / developers := List(
+  Developer(
+    id    = "methrat0n",
+    name  = "Merlin Goulet",
+    email = "merlin.goulet@live.fr",
+    url   = url("http://io.github.methrat0n")
   )
 )
 
-lazy val publishSettings = Seq(
-  homepage := Some(url(s"https://github.com/$username/$repo")),
-  scmInfo := Some(ScmInfo(url(s"https://github.com/$username/$repo"), s"git@github.com:$username/$repo.git")),
-  developers := List(
-    Developer(
-      id = username,
-      name = "Merlin Goulet",
-      email = "merlingoulet@live.com",
-      url = new URL(s"http://github.com/$username")
-    )
-  ),
-  publishMavenStyle := true,
-  publishTo := Some(if (isSnapshot.value) Opts.resolver.sonatypeSnapshots else Opts.resolver.sonatypeStaging)
-)
+ThisBuild / description := "Obtains any format from your class in just one line"
+ThisBuild / licenses := List("MIT" -> new URL("https://github.com/Methrat0n/restruct/blob/master/LICENSE"))
+ThisBuild / homepage := Some(url("https://github.com/methrat0n/restruct"))
+
+// Remove all additional repository other than Maven Central from POM
+ThisBuild / pomIncludeRepository := { _ => false }
+ThisBuild / publishTo := {
+  val nexus = "https://oss.sonatype.org/"
+  if (isSnapshot.value) Some("snapshots" at nexus + "content/repositories/snapshots")
+  else Some("releases" at nexus + "service/local/staging/deploy/maven2")
+}
+ThisBuild / publishMavenStyle := true
+
+useGpg := true
+
+publishConfiguration := publishConfiguration.value.withOverwrite(true)
+com.typesafe.sbt.pgp.PgpKeys.publishSignedConfiguration := com.typesafe.sbt.pgp.PgpKeys.publishSignedConfiguration.value.withOverwrite(true)
+publishLocalConfiguration := publishLocalConfiguration.value.withOverwrite(true)
+com.typesafe.sbt.pgp.PgpKeys.publishLocalSignedConfiguration := com.typesafe.sbt.pgp.PgpKeys.publishLocalSignedConfiguration.value.withOverwrite(true)
