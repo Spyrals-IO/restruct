@@ -240,7 +240,7 @@ object Impl {
            |$sub.bind(algebra),
            |io.github.methrat0n.restruct.schema.RequiredField(
            |  io.github.methrat0n.restruct.core.data.schema.Path(
-           |    cats.data.NonEmptyList(
+           |    io.github.methrat0n.restruct.core.data.schema.StepList(
            |      io.github.methrat0n.restruct.core.data.schema.StringStep("__type"),List.empty)
            |    ),
            |    io.github.methrat0n.restruct.schema.Syntax.string.constraintedBy(
@@ -297,11 +297,27 @@ object Impl {
           val treeSchema = inferSchema(typ.typeArgs.head)
           val internalTyp = typ.typeArgs.head
           val fieldName = name.decodedName.toString.replaceAll(" ", "")
-          q"io.github.methrat0n.restruct.schema.OptionalField[$internalTyp](io.github.methrat0n.restruct.core.data.schema.Path(cats.data.NonEmptyList(io.github.methrat0n.restruct.core.data.schema.StringStep($fieldName), List.empty)), $treeSchema, None)"
+          q"""
+             io.github.methrat0n.restruct.schema.OptionalField[$internalTyp](
+               io.github.methrat0n.restruct.core.data.schema.Path(
+                 io.github.methrat0n.restruct.core.data.schema.StepList(
+                   io.github.methrat0n.restruct.core.data.schema.StringStep($fieldName), List.empty
+                 )
+               ), $treeSchema, None
+             )
+          """
         case (name, typ) =>
           val treeSchema = inferSchema(typ)
           val fieldName = name.decodedName.toString.replaceAll(" ", "")
-          q"io.github.methrat0n.restruct.schema.RequiredField[$typ](io.github.methrat0n.restruct.core.data.schema.Path(cats.data.NonEmptyList(io.github.methrat0n.restruct.core.data.schema.StringStep($fieldName), List.empty)), $treeSchema, None)"
+          q"""
+              io.github.methrat0n.restruct.schema.RequiredField[$typ](
+                io.github.methrat0n.restruct.core.data.schema.Path(
+                  io.github.methrat0n.restruct.core.data.schema.StepList(
+                    io.github.methrat0n.restruct.core.data.schema.StringStep($fieldName), List.empty
+                  )
+                ), $treeSchema, None
+              )
+          """
       }
       val composeFields = fieldsTree.tail.foldLeft(fieldsTree.head)((acc, field) => q"$acc.and($field)")
       val schemaTree = q"io.github.methrat0n.restruct.schema.Schema($composeFields)"
@@ -346,11 +362,27 @@ object Impl {
           val treeSchema = inferSchema(typ.typeArgs.head)
           val internalTyp = typ.typeArgs.head
           val fieldName = name.decodedName.toString.replaceAll(" ", "")
-          q"io.github.methrat0n.restruct.schema.OptionalField[$internalTyp](io.github.methrat0n.restruct.core.data.schema.Path(cats.data.NonEmptyList(io.github.methrat0n.restruct.core.data.schema.StringStep($fieldName), List.empty)), $treeSchema, None)"
+          q"""
+             io.github.methrat0n.restruct.schema.OptionalField[$internalTyp](
+               io.github.methrat0n.restruct.core.data.schema.Path(
+                 io.github.methrat0n.restruct.core.data.schema.StepList(
+                   io.github.methrat0n.restruct.core.data.schema.StringStep($fieldName), List.empty
+                 )
+               ), $treeSchema, None
+             )
+          """
         case (name, typ) =>
           val treeSchema = inferSchema(typ)
           val fieldName = name.decodedName.toString.replaceAll(" ", "")
-          q"io.github.methrat0n.restruct.schema.RequiredField[$typ](io.github.methrat0n.restruct.core.data.schema.Path(cats.data.NonEmptyList(io.github.methrat0n.restruct.core.data.schema.StringStep($fieldName), List.empty)), $treeSchema, None)"
+          q"""
+              io.github.methrat0n.restruct.schema.RequiredField[$typ](
+                io.github.methrat0n.restruct.core.data.schema.Path(
+                  io.github.methrat0n.restruct.core.data.schema.StepList(
+                    io.github.methrat0n.restruct.core.data.schema.StringStep($fieldName), List.empty
+                  )
+                ), $treeSchema, None
+              )
+          """
       }
       val composeFields = fieldsTree.tail.foldLeft(fieldsTree.head)((acc, field) => q"$acc.and($field)")
       val schemaTree = q"io.github.methrat0n.restruct.schema.Schema($composeFields)"

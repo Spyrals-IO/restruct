@@ -94,20 +94,19 @@ lazy val commonSettings =
   publishSettings
 
 lazy val coreDependencies = Seq(
-  Dependencies.test.scalaTest,
-  Dependencies.cats.core
+  Dependencies.test.scalaTest
 )
 
 lazy val playJsonDependencies = Seq(
-  Dependencies.json.play,
+  Dependencies.json.play
 )
 
 lazy val enumeratumDependencies = Seq(
-  Dependencies.enumeratum.enum,
+  Dependencies.enumeratum.enum
 )
 
 lazy val bsonDependencies = Seq(
-  Dependencies.mongo.reactive,
+  Dependencies.mongo.reactive
 )
 
 lazy val configLoaderDependencies = Seq(

@@ -1,10 +1,6 @@
 import sbt._
 
 object Dependencies {
-  object cats {
-    val version = "1.0.1" //TODO minimify
-    val core = "org.typelevel" %% "cats-core" % version
-  }
 
   object enumeratum {
     val version = "1.5.13" //TODO minimify and retro
