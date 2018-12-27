@@ -1,14 +1,13 @@
 package io.github.methrat0n.restruct.core.data.schema
 
-import cats.data.NonEmptyList
 import io.github.methrat0n.restruct.schema.{ OptionalField, RequiredField, Schema }
 
-final case class Path(steps: NonEmptyList[Step]) {
+final case class Path(steps: StepList) {
 
   def \(step: String): Path =
-    Path(NonEmptyList(steps.head, steps.tail :+ StringStep(step)))
+    Path(StepList(steps.head, steps.tail :+ StringStep(step)))
   def \(step: Int): Path =
-    Path(NonEmptyList(steps.head, steps.tail :+ IntStep(step)))
+    Path(StepList(steps.head, steps.tail :+ IntStep(step)))
   def as[A](implicit schema: Schema[A]): RequiredField[A] =
     RequiredField(this, schema, None)
   def asOption[A](implicit schema: Schema[A]): OptionalField[A] =
@@ -17,9 +16,9 @@ final case class Path(steps: NonEmptyList[Step]) {
 
 object Path {
   def \(step: String): Path =
-    Path(NonEmptyList(StringStep(step), List.empty))
+    Path(StepList(StringStep(step), List.empty))
   def \(step: Int): Path =
-    Path(NonEmptyList(IntStep(step), List.empty))
+    Path(StepList(IntStep(step), List.empty))
 }
 
 sealed trait Step
@@ -27,3 +26,7 @@ sealed trait Step
 final case class StringStep(step: String) extends Step
 final case class IntStep(step: Int) extends Step
 
+final case class StepList(head: Step, tail: List[Step]) {
+  val toList: List[Step] =
+    List(head) ++ tail
+}
