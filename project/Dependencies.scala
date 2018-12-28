@@ -26,4 +26,9 @@ object Dependencies {
     val version = "2.6.0"
     val play = "com.typesafe.play" %% "play" % version
   }
+
+  object restruct {
+    val version = "0.1.0"
+    val reads = "io.github.methrat0n" %% "restruct-play-json-reads" % version
+  }
 }

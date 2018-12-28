@@ -86,7 +86,7 @@ lazy val queryStringBindable = (project in file("./queryStringBindable"))
 lazy val examples = (project in file("./examples"))
   .settings(commonSettings: _*)
   .settings(name := "restruct-examples")
-  .dependsOn(core, reads)
+  .settings(libraryDependencies += Dependencies.restruct.reads)
 
 lazy val commonSettings =
   Settings.scala.commonSettings ++
@@ -125,12 +125,12 @@ lazy val scalariformCommonSettings = Seq(
 
 ThisBuild / organization := "io.github.methrat0n"
 ThisBuild / organizationName := "methrat0n"
-ThisBuild / organizationHomepage := Some(url("http://io.github.methrat0n"))
+ThisBuild / organizationHomepage := Some(url("https://methrat0n.github.io/"))
 
 ThisBuild / scmInfo := Some(
   ScmInfo(
-    url("https://github.com/methrat0n/restruct"),
-    "scm:git@github.com:methrat0n/restruct.git"
+    url("https://github.io/methrat0n/restruct"),
+    "scm:git@github.io:methrat0n/restruct.git"
   )
 )
 ThisBuild / developers := List(
@@ -138,26 +138,22 @@ ThisBuild / developers := List(
     id    = "methrat0n",
     name  = "Merlin Goulet",
     email = "merlin.goulet@live.fr",
-    url   = url("http://io.github.methrat0n")
+    url   = url("https://methrat0n.github.io/")
   )
 )
 
 ThisBuild / description := "Obtains any format from your class in just one line"
 ThisBuild / licenses := List("MIT" -> new URL("https://github.com/Methrat0n/restruct/blob/master/LICENSE"))
-ThisBuild / homepage := Some(url("https://github.com/methrat0n/restruct"))
+ThisBuild / homepage := Some(url("https://methrat0n.github.io/"))
 
 // Remove all additional repository other than Maven Central from POM
 ThisBuild / pomIncludeRepository := { _ => false }
 ThisBuild / publishTo := {
   val nexus = "https://oss.sonatype.org/"
-  if (isSnapshot.value) Some("snapshots" at nexus + "content/repositories/snapshots")
-  else Some("releases" at nexus + "service/local/staging/deploy/maven2")
+  //if (isSnapshot.value) Some("snapshots" at nexus + "content/repositories/snapshots")
+  /*else*/ Some("releases" at nexus + "service/local/staging/deploy/maven2")
 }
 ThisBuild / publishMavenStyle := true
 
 useGpg := true
-
-publishConfiguration := publishConfiguration.value.withOverwrite(true)
-com.typesafe.sbt.pgp.PgpKeys.publishSignedConfiguration := com.typesafe.sbt.pgp.PgpKeys.publishSignedConfiguration.value.withOverwrite(true)
-publishLocalConfiguration := publishLocalConfiguration.value.withOverwrite(true)
-com.typesafe.sbt.pgp.PgpKeys.publishLocalSignedConfiguration := com.typesafe.sbt.pgp.PgpKeys.publishLocalSignedConfiguration.value.withOverwrite(true)
+isSnapshot := true

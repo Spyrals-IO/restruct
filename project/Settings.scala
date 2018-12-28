@@ -6,7 +6,7 @@ object Settings {
     val version = "2.12.4"
     val commonSettings = Seq(
       scalaVersion := version,
-      organization := "com.github.methrat0n",
+      organization := "io.github.methrat0n",
       scalacOptions := Seq (
         "-encoding", "utf-8",
         "-explaintypes",
