@@ -2,11 +2,11 @@
 
 Restruct let you describe your types in a unyfied syntax and derived any format from this very same syntax.
 
-Warning : This library is still in beta version. Tests are not yet fully written and error may be unclear.
+Warning : This library is still in beta. Tests are not yet fully written and error may be unclear.
 
 ### Case Class
 
-First, define a field schema. Choose a name and paired it with it's type :
+First, define a field schema. Choose a name and paired it with its type :
 ```scala
 import io.github.methrat0n.restruct.schema.Schema
 import io.github.methrat0n.restruct.schema.Syntax._
@@ -22,8 +22,8 @@ import io.github.methrat0n.restruct.schema.Syntax._
 val optionalUsernameFieldSchema: Schema[Option[String]] = "username".asOption[String]
 ```
 
-The _as_ and _asOption_ functions needs an implicit value of type Schema[T]. In our example, we need a Schema[String].
-All defaults schema are provided by the __syntax.___ import.
+The `as` and `asOption` functions needs an implicit value of type `Schema[T]`. In our example, we need a `Schema[String]`.
+All defaults schema are provided by the `io.github.methrat0n.restruct.schema.Syntax._` import.
 
 Then combine different fields to build the case class schema.
 
@@ -41,8 +41,8 @@ object User {
 }
 ```
 
-The fields mixed with _and_ need to match the case class signature.
-In our example, any Schema other than (String and Int and Option[String]) would have failed.
+The fields combined with `and` need to match the case class signature.
+In our example, any `Schema` other than (`String` and `Int` and `Option[String]`) would have failed.
 
 With this schema, it's possible to derive any supported format.
 
@@ -51,6 +51,7 @@ import io.github.methrat0n.restruct.readers.config.configLoader
 implicit lazy val schema: Schema[User] = ...
 implicit lazy val configLoader: ConfigLoader[User] = schema.bind(configLoader)
 ````
+
 We ask for a [ConfigLoader](https://www.playframework.com/documentation/2.6.x/ScalaConfig#configloader).
 In [Play Applications](https://www.playframework.com/), this implicit would allow to read our case class from the configuration.
 
@@ -80,15 +81,15 @@ object Person {
 }
 
 ````
-_or_ let us combine two schema into one.
-The personSchema can be infer if all his children are mixed together and only his children.
+`or` let us combine two schema into one.
+The `personSchema` can be infered if all its children are combined together and only its children.
 
 ### Path
 
 It's possible to specify where to read / write your data.
 Instead of just giving a name to your fields, give them a full path.
 
-This path can be build from String and Int. Strings will be interpreted as objects names in the structure and Ints as array indexes.
+This path can be build from `String` and `Int`. `String`s will be interpreted as object names in the structure and `Int`s as array indexes.
 
 ````scala
 import io.github.methrat0n.restruct.schema.Schema
@@ -101,7 +102,7 @@ implicit lazy val schema: Schema[User] =
 }
 ````
 
-Our username will now be read from the top array named "bodies". At index 0 should be an object, in which we select the field "username".
+Our username will now be read from the top array named `bodies`. At index 0 should be an object, in which we select the field "username".
 If we read our user from a json string, a matching example would be :
 
 ```json
@@ -131,13 +132,13 @@ implicit lazy val schema: Schema[User] =
   "age".as[Int] and
   "bankAccount".asOption[String]  
 ````
-The default value must be of the same type as the field. Following, for optional field, an Option[T] must be pass.
+The default value must be of the same type as the field. Following, for optional field, an `Option[T]` must be passed.
 The default value will only ever be used if the field cant be found in data.
 
 ### Constraints
 
 Constraints can be placed onto your field.
-This is typicly means for validation, but can also be used to describe more clearly an interface contract.
+This is typicaly usefull for validation, but can also be used to describe more clearly an interface contract.
 
 ````scala
 import io.github.methrat0n.restruct.schema.Schema
@@ -167,8 +168,8 @@ This schema will be in error if the bankAccount property is None.
 
 ### Without implicit conversion
 
-Three implicit conversions exist in the syntax. The first two transform a String or an Int to a Path. Allowing the _as_, _asOption_ and _\\_ syntax.
-If you prefer, it's also possible to prefix your Path with a _Path \\_
+Three implicit conversions exist in the syntax. The first two transform a String or an Int to a Path. Allowing the _as_, `asOption` and `\\` syntax.
+If you prefer, it's also possible to prefix your Path with a `Path \\`
 
 ```scala
 import io.github.methrat0n.restruct.schema.Syntax._
@@ -188,7 +189,7 @@ val ageAsInt = (Path \ "age").as[Int]
 The third implicit conversion is on the Schema construction itself. When you mix schemas using the _and_ function it does not
 build a Schema[YourType] if build a composite Schema of tuples. To transform the first into the last, the Schema _apply_ function is called implicitly.
 
-````scala
+```scala
 import io.github.methrat0n.restruct.schema.Schema
 import io.github.methrat0n.restruct.schema.Syntax._
 
@@ -196,7 +197,7 @@ implicit lazy val schema: Schema[User] =
   "username".as[String] and
   "age".as[Int] and
   "bankAccount".asOption[String]  
-````
+```
 
 become 
 
@@ -212,7 +213,7 @@ implicit lazy val schema: Schema[User] = Schema(
 ````
 
 ### Strict Schema
-When working with sealed trait, a matching problem can arise.
+When working with sealed traits, there can be a matching problem.
 If a trait have multiple childrens with the same type signature, it's impossible to differenciate them.
 To match the right type, you need a StrictSchema.
 
@@ -227,7 +228,7 @@ implicit lazy val schema: Schema[User] = StrictSchema(
 )
 ````
 
-This schema will add a __type field into your structure, which will hold your type's name.
+This schema will add a `__type` field into your structure, which will hold your type's name.
 This could also be used to serialize your type's name, in case of meaningful ADT or enumeration.
 
 ### Helpful macro
@@ -252,8 +253,8 @@ import io.github.methrat0n.restruct.schema.Syntax.list
 implicit def arraySchema[T](implicit schema: Schema[T]): Schema[Array[T]] =
   list[T](schema).inmap(_.toArray)(_.toList)
 ```
-Here a Schema[Array[T]] is defined from the default list Schema. The inmap function is defined in Schema and can be used
-to obtains a new Schema from an existing one.
+Here a `Schema[Array[T]]` is defined from the default list Schema. The `inmap` function is defined in `Schema` and can be used
+to obtains a new `Schema` from an existing one.
 
 #### Using Restruct
 Restruct is still in beta and tests aren't fully written. Nevertherless, the last version of the library is 0.1.0 and is
@@ -292,4 +293,4 @@ If a schema with path is bind to the queryStringBindable object a RuntimeExcepti
 ### Known issues
 
 #### Macro derivation cant find default value
-For know the macro derived schemas will not contains default values even if they are present in the corresponding case class.
+Currently, the schemas derived using macro will not contains default values even if they are present in the corresponding case class.
