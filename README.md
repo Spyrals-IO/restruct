@@ -168,8 +168,8 @@ This schema will be in error if the bankAccount property is None.
 
 ### Without implicit conversion
 
-Three implicit conversions exist in the syntax. The first two transform a String or an Int to a Path. Allowing the _as_, `asOption` and `\\` syntax.
-If you prefer, it's also possible to prefix your Path with a `Path \`
+Three implicit conversions exist in the syntax. The first two transform a String or an Int to a Path. Allowing the _as_, `asOption` and `\` syntax.
+If you prefer, it's also possible to prefix your Path with a `Path \\`
 
 ```scala
 import io.github.methrat0n.restruct.schema.Syntax._
