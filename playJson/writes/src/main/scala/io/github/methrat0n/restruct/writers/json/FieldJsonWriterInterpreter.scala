@@ -14,7 +14,7 @@ trait FieldJsonWriterInterpreter extends FieldAlgebra[Writes] {
   override def verifying[T](schema: Writes[T], constraint: Constraint[T]): Writes[T] =
     schema
 
-  override def either[A, B](a: Writes[A], b: Writes[B]): Writes[Either[A, B]] =
+  override def or[A, B](a: Writes[A], b: Writes[B]): Writes[Either[A, B]] =
     Writes {
       case Left(input)  => a.writes(input)
       case Right(input) => b.writes(input)

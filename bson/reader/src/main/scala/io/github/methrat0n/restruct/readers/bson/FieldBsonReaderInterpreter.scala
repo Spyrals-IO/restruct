@@ -1,8 +1,10 @@
 package io.github.methrat0n.restruct.readers.bson
 
 import io.github.methrat0n.restruct.core.data.constraints.Constraint
-import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, Path }
+import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, NoMatchException, Path }
 import reactivemongo.bson.{ BSONReader, BSONValue }
+
+import scala.util.{ Failure, Success }
 
 trait FieldBsonReaderInterpreter extends FieldAlgebra[BsonReader] {
 
@@ -21,10 +23,13 @@ trait FieldBsonReaderInterpreter extends FieldAlgebra[BsonReader] {
   override def imap[A, B](fa: BsonReader[A])(f: A => B)(g: B => A): BsonReader[B] =
     fa.afterRead[B](f)
 
-  override def either[A, B](fa: BsonReader[A], fb: BsonReader[B]): BsonReader[Either[A, B]] =
-    BSONReader[BSONValue, Either[A, B]](bsonValue => fa.asInstanceOf[BSONReader[BSONValue, A]].readOpt(bsonValue) match {
-      case Some(a) => Left(a)
-      case None    => Right(fb.asInstanceOf[BSONReader[BSONValue, B]].read(bsonValue))
+  override def or[A, B](fa: BsonReader[A], fb: BsonReader[B]): BsonReader[Either[A, B]] =
+    BSONReader[BSONValue, Either[A, B]](bsonValue => fa.asInstanceOf[BSONReader[BSONValue, A]].readTry(bsonValue) match {
+      case Success(a) => Left(a)
+      case Failure(aThrowable) => fb.asInstanceOf[BSONReader[BSONValue, B]].readTry(bsonValue) match {
+        case Success(b)          => Right(b)
+        case Failure(bThrowable) => throw NoMatchException.product(aThrowable, bThrowable)
+      }
     })
 
   override def product[A, B](fa: BsonReader[A], fb: BsonReader[B]): BsonReader[(A, B)] =

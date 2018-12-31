@@ -3,9 +3,9 @@ package io.github.methrat0n.restruct.readers.config
 import com.typesafe.config.{ Config, ConfigException, ConfigList, ConfigObject }
 import play.api.{ ConfigLoader, Configuration }
 import io.github.methrat0n.restruct.core.data.constraints.Constraint
-import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, IntStep, Path, StringStep }
+import io.github.methrat0n.restruct.core.data.schema._
 
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 trait FieldConfigInterpreter extends FieldAlgebra[ConfigLoader] {
   override def required[T](path: Path, schema: ConfigLoader[T], default: Option[T]): ConfigLoader[T] = (config: Config, configPath: String) => {
@@ -29,12 +29,12 @@ trait FieldConfigInterpreter extends FieldAlgebra[ConfigLoader] {
     else throw configuration.reportError(configPath, s"Constraint ${constraint.name} check failed for $value", None)
   }
 
-  override def either[A, B](fa: ConfigLoader[A], fb: ConfigLoader[B]): ConfigLoader[Either[A, B]] = (config: Config, configPath: String) => {
-    Try { fa.load(config, configPath) }.toOption match {
-      case Some(a) => Left(a)
-      case None => Try { fb.load(config, configPath) }.toOption match {
-        case Some(b) => Right(b)
-        case None    => throw new Configuration(config).reportError(configPath, s"Cannot load this config using neither $fa nor $fb", None)
+  override def or[A, B](fa: ConfigLoader[A], fb: ConfigLoader[B]): ConfigLoader[Either[A, B]] = (config: Config, configPath: String) => {
+    Try { fa.load(config, configPath) } match {
+      case Success(a) => Left(a)
+      case Failure(aThrowable) => Try { fb.load(config, configPath) } match {
+        case Success(b)          => Right(b)
+        case Failure(bThrowable) => throw NoMatchException.product(aThrowable, bThrowable)
       }
     }
   }

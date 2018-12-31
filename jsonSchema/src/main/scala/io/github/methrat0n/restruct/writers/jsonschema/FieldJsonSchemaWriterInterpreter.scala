@@ -26,7 +26,7 @@ trait FieldJsonSchemaWriterInterpreter extends FieldAlgebra[JsonSchemaWriter] {
       constraint.name -> writeArgs(constraint.args)
     ), writer.verifying(schema._2, constraint))
 
-  override def either[A, B](fa: JsonSchemaWriter[A], fb: (JsObject, Writes[B])): JsonSchemaWriter[Either[A, B]] = ((fa._1, fb._1) match {
+  override def or[A, B](fa: JsonSchemaWriter[A], fb: (JsObject, Writes[B])): JsonSchemaWriter[Either[A, B]] = ((fa._1, fb._1) match {
     case (a, b) if a.value.contains("oneOf") && b.value.contains("oneOf") =>
       deepMerge(a, b)
     case (a, b) if a.value.contains("oneOf") =>
@@ -41,7 +41,7 @@ trait FieldJsonSchemaWriterInterpreter extends FieldAlgebra[JsonSchemaWriter] {
       Json.obj(
         "oneOf" -> Json.arr(a, b)
       )
-  }, writer.either(fa._2, fb._2))
+  }, writer.or(fa._2, fb._2))
 
   override def product[A, B](fa: JsonSchemaWriter[A], fb: JsonSchemaWriter[B]): JsonSchemaWriter[(A, B)] =
     (deepMerge(fa._1, fb._1), writer.product(fa._2, fb._2))

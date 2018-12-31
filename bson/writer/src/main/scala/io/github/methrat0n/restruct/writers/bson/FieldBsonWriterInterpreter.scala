@@ -33,7 +33,7 @@ trait FieldBsonWriterInterpreter extends FieldAlgebra[BsonWriter] {
   override def verifying[T](schema: BsonWriter[T], constraint: Constraint[T]): BsonWriter[T] =
     schema
 
-  override def either[A, B](fa: BsonWriter[A], fb: BsonWriter[B]): BsonWriter[Either[A, B]] = BsonWriter({
+  override def or[A, B](fa: BsonWriter[A], fb: BsonWriter[B]): BsonWriter[Either[A, B]] = BsonWriter({
     case Right(b) => fb.write(b)
     case Left(a)  => fa.write(a)
   })
