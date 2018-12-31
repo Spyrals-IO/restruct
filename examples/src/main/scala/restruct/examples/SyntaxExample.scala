@@ -1,6 +1,6 @@
 package restruct.examples
 
-import io.github.methrat0n.restruct.readers.json.JsonReaderInterpreter
+import io.github.methrat0n.restruct.readers.json.jsonReads
 import io.github.methrat0n.restruct.schema.{ Schema, StrictSchema }
 import play.api.libs.json.Json
 
@@ -30,13 +30,13 @@ object SyntaxExample extends App {
       |}
     """.stripMargin
 
-  User.autoSchema.bind(JsonReaderInterpreter).reads(Json.parse(goodUserJson)) match {
+  User.autoSchema.bind(jsonReads).reads(Json.parse(goodUserJson)) match {
     case play.api.libs.json.JsSuccess(value, _) => println(value)
     case play.api.libs.json.JsError(errors)     => println(errors)
   }
 
   import io.github.methrat0n.restruct.schema.Syntax._
-  bigInt.bind(JsonReaderInterpreter).reads(Json.parse("111")) match {
+  bigInt.bind(jsonReads).reads(Json.parse("111")) match {
     case play.api.libs.json.JsSuccess(value, _) => println(value)
     case play.api.libs.json.JsError(errors)     => println(errors)
   }

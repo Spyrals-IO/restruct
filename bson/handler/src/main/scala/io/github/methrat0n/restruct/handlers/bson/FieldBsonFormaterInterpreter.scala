@@ -2,13 +2,13 @@ package io.github.methrat0n.restruct.handlers.bson
 
 import io.github.methrat0n.restruct.core.data.constraints.Constraint
 import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, Path }
-import io.github.methrat0n.restruct.readers.bson.BsonReaderInterpreter
-import io.github.methrat0n.restruct.writers.bson.BsonWriterInterpreter
+import io.github.methrat0n.restruct.readers.bson.bsonReader
+import io.github.methrat0n.restruct.writers.bson.bsonWriter
 
 trait FieldBsonFormaterInterpreter extends FieldAlgebra[BsonHandler] {
 
-  private[this] val reader = BsonReaderInterpreter
-  private[this] val writer = BsonWriterInterpreter
+  private[this] val reader = bsonReader
+  private[this] val writer = bsonWriter
 
   override def optional[T](path: Path, schema: BsonHandler[T], default: Option[Option[T]]): BsonHandler[Option[T]] =
     BsonHandler(

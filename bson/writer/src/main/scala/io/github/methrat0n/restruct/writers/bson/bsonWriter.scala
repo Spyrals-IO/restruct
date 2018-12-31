@@ -1,0 +1,3 @@
+package io.github.methrat0n.restruct.writers.bson
+
+object bsonWriter extends SimpleBsonWriterInterpreter with ComplexBsonWriterInterpreter with FieldBsonWriterInterpreter

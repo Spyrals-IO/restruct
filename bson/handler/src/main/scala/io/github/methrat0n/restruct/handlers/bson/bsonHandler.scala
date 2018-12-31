@@ -1,0 +1,3 @@
+package io.github.methrat0n.restruct.handlers.bson
+
+object bsonHandler extends SimpleBsonFormaterInterpreter with ComplexBsonFormaterInterpreter with FieldBsonFormaterInterpreter
