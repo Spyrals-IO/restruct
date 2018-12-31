@@ -15,7 +15,19 @@ trait FieldAlgebra[F[_]] extends ComplexSchemaAlgebra[F] {
   def verifying[T](schema: F[T], constraint: List[Constraint[T]]): F[T] =
     constraint.foldLeft(schema)((schema, constraint) => verifying(schema, constraint))
 
-  def either[A, B](fa: F[A], fb: F[B]): F[Either[A, B]]
+  /**
+   * Should return a success if any found or concatenate errors.
+   *
+   * Behavior will be the following:
+   * fa == sucess => fa
+   * fa == error && fb == sucess => fb
+   * fa == error && fb == error => concatenate errors
+   *
+   * If two successes are found, only the first parameter will be taken into account.
+   *
+   * @return F in error (depends on the implementing F) or successful F with one of the two value
+   */
+  def or[A, B](fa: F[A], fb: F[B]): F[Either[A, B]]
 
   def imap[A, B](fa: F[A])(f: A => B)(g: B => A): F[B]
 

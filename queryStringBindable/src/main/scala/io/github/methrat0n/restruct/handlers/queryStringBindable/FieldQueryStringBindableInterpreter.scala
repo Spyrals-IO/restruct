@@ -48,16 +48,19 @@ trait FieldQueryStringBindableInterpreter extends FieldAlgebra[QueryStringBindab
       schema.unbind(key, value)
   }
 
-  override def either[A, B](fa: QueryStringBindable[A], fb: QueryStringBindable[B]): QueryStringBindable[Either[A, B]] = new QueryStringBindable[Either[A, B]] {
+  override def or[A, B](fa: QueryStringBindable[A], fb: QueryStringBindable[B]): QueryStringBindable[Either[A, B]] = new QueryStringBindable[Either[A, B]] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, Either[A, B]]] = {
-      val a = fa.bind(key, params).map(_.map(Left.apply))
-      val b = fb.bind(key, params).map(_.map(Right.apply))
-      if (a.isDefined && a.exists(_.isRight))
-        a
-      else if (b.isDefined && b.exists(_.isRight))
-        b
-      else
-        None
+      val a = fa.bind(key, params)
+      val b = fb.bind(key, params)
+      a match {
+        case Some(Right(aValue)) => Some(Right(Left(aValue)))
+        case Some(Left(aError)) => b match {
+          case Some(Right(bValue)) => Some(Right(Right(bValue)))
+          case Some(Left(bError))  => Some(Left(s"$aError ; $bError"))
+          case None                => None
+        }
+        case None => None
+      }
     }
 
     override def unbind(key: String, value: Either[A, B]): String =

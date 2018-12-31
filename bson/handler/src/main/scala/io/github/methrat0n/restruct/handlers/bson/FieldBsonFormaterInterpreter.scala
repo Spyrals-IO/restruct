@@ -34,10 +34,10 @@ trait FieldBsonFormaterInterpreter extends FieldAlgebra[BsonHandler] {
       writer.imap(fa)(f)(g).write
     )
 
-  override def either[A, B](a: BsonHandler[A], b: BsonHandler[B]): BsonHandler[Either[A, B]] =
+  override def or[A, B](a: BsonHandler[A], b: BsonHandler[B]): BsonHandler[Either[A, B]] =
     BsonHandler(
-      reader.either(a, b).read,
-      writer.either(a, b).write
+      reader.or(a, b).read,
+      writer.or(a, b).write
     )
 
   override def product[A, B](fa: BsonHandler[A], fb: BsonHandler[B]): BsonHandler[(A, B)] =

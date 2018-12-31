@@ -21,7 +21,7 @@ trait Schema[A] { self =>
 
   def or[B](schema: Schema[B]): Schema[Either[A, B]] = new Schema[Either[A, B]] {
     override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Either[A, B]] =
-      algebra.either(self.bind(algebra), schema.bind(algebra))
+      algebra.or(self.bind(algebra), schema.bind(algebra))
   }
 
   def inmap[B](f: A => B)(g: B => A): Schema[B] = new Schema[B] {
@@ -253,7 +253,7 @@ object Impl {
            |)""".stripMargin
       }
       val typName = typTag.tpe.typeSymbol.name.decodedName.toString
-      val restructSchema = subsWithFlag.tail.foldLeft(subsWithFlag.head)((acc, sub) => s"algebra.either($acc,$sub)")
+      val restructSchema = subsWithFlag.tail.foldLeft(subsWithFlag.head)((acc, sub) => s"algebra.or($acc,$sub)")
       c.Expr[Schema[Typ]](c.parse(s"""
           import scala.language.higherKinds
           new io.github.methrat0n.restruct.schema.Schema[$typName] {

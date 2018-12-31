@@ -29,10 +29,10 @@ trait FieldJsonFormaterInterpreter extends FieldAlgebra[Format] {
       writer.imap(fa)(f)(g)
     )
 
-  override def either[A, B](a: Format[A], b: Format[B]): Format[Either[A, B]] =
+  override def or[A, B](a: Format[A], b: Format[B]): Format[Either[A, B]] =
     Format(
-      reader.either(a, b),
-      writer.either(a, b)
+      reader.or(a, b),
+      writer.or(a, b)
     )
 
   override def product[A, B](fa: Format[A], fb: Format[B]): Format[(A, B)] =

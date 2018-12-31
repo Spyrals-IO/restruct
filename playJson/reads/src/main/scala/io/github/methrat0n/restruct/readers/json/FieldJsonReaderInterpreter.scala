@@ -19,8 +19,14 @@ trait FieldJsonReaderInterpreter extends FieldAlgebra[Reads] {
   override def imap[A, B](fa: Reads[A])(f: A => B)(g: B => A): Reads[B] =
     fa.map(f)
 
-  override def either[A, B](a: Reads[A], b: Reads[B]): Reads[Either[A, B]] =
-    a.map[Either[A, B]](Left.apply).orElse(b.map[Either[A, B]](Right.apply))
+  override def or[A, B](a: Reads[A], b: Reads[B]): Reads[Either[A, B]] = Reads(jsValue =>
+    a.reads(jsValue) match {
+      case aSucess @ JsSuccess(_, _) => aSucess.map(Left.apply)
+      case aError: JsError => b.reads(jsValue) match {
+        case bSucess @ JsSuccess(_, _) => bSucess.map(Right.apply)
+        case bError: JsError           => aError ++ bError
+      }
+    })
 
   import play.api.libs.functional.syntax._
   override def product[A, B](fa: Reads[A], fb: Reads[B]): Reads[(A, B)] =

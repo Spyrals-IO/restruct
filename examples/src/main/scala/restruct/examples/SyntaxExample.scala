@@ -1,8 +1,10 @@
 package restruct.examples
 
+import io.github.methrat0n.restruct.readers.bson.bsonReader
 import io.github.methrat0n.restruct.readers.json.jsonReads
 import io.github.methrat0n.restruct.schema.{ Schema, StrictSchema }
 import play.api.libs.json.Json
+import reactivemongo.bson.BSONDocument
 
 object SyntaxExample extends App {
 
@@ -26,7 +28,8 @@ object SyntaxExample extends App {
       |{
       |  "name": "merlin",
       |  "age": 24,
-      |  "__type": "BadUser"
+      |
+      |  "__type": "Badser"
       |}
     """.stripMargin
 
@@ -40,6 +43,14 @@ object SyntaxExample extends App {
     case play.api.libs.json.JsSuccess(value, _) => println(value)
     case play.api.libs.json.JsError(errors)     => println(errors)
   }
+
+  val bsonGoodUser = BSONDocument(
+    "name" -> "merlin",
+    "age" -> 24,
+    "__type" -> "BadUser"
+  )
+
+  User.autoSchema.bind(bsonReader).read(bsonGoodUser)
 
 }
 
