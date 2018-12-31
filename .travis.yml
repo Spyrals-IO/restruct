@@ -1,0 +1,14 @@
+sudo: false
+
+git:
+  depth: false
+
+language: scala
+jdk:
+- oraclejdk8
+scala:
+  - 2.12.4
+
+branches:
+  only:
+  - master
