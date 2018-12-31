@@ -162,13 +162,13 @@ val kevinSchema: Schema[String] = string.constraintedBy(Constraints.EqualConstra
 val userWithAccountSchema: Schema[User] = User.schema.constraintedBy(UserConstraints.WithAccount)
 ```
 
-The first line define a schema for string wihch only allow "kevin" as valid value.
+The first line define a schema for string which only allow "kevin" as valid value.
 The second line use a fake UserConstraints package to create a schema for User.
 This schema will be in error if the bankAccount property is None.
 
 ### Without implicit conversion
 
-Three implicit conversions exist in the syntax. The first two transform a String or an Int to a Path. Allowing the _as_, `asOption` and `\` syntax.
+Three implicit conversions exist in the syntax. The first two transform a String or an Int to a Path. Allowing the `as`, `asOption` and `\` syntax.
 If you prefer, it's also possible to prefix your Path with a `Path \`
 
 ```scala
@@ -186,8 +186,8 @@ import io.github.methrat0n.restruct.core.data.schema.Path
 val ageAsInt = (Path \ "age").as[Int]
 ```
 
-The third implicit conversion is on the Schema construction itself. When you mix schemas using the _and_ function it does not
-build a Schema[YourType] if build a composite Schema of tuples. To transform the first into the last, the Schema _apply_ function is called implicitly.
+The third implicit conversion is on the Schema construction itself. When you mix schemas using the `and` function it does not
+build a `Schema[YourType]` if build a composite Schema of tuples. To transform the first into the last, the Schema `apply` function is called implicitly.
 
 ```scala
 import io.github.methrat0n.restruct.schema.Schema
@@ -287,7 +287,7 @@ Instructions for Maven and other build tools are available at [search.maven.org.
 
 #### Query-String-Bindable
 The path syntax is not supported for query-string as querystrings contains only one layer.
-If a schema with path is bind to the queryStringBindable object a RuntimeException will be raised (this exception should be more specific with time).
+If a schema with path is bind to the `queryStringBindable` object a `RuntimeException` will be raised (this exception should be more specific with time).
 
 
 ### Known issues
