@@ -5,7 +5,7 @@ import reactivemongo.bson.{ BSONDocument, BSONDocumentHandler }
 
 object BsonDocumentHandler {
   def run[T](program: Schema[T]): BSONDocumentHandler[T] = {
-    val handler = BsonFormaterInterpreter.run(program)
+    val handler = bsonHandler.run(program)
     BSONDocumentHandler[T](
       handler.read, handler.write _ andThen {
         case document: BSONDocument => document

@@ -1,0 +1,3 @@
+package io.github.methrat0n.restruct.readers.bson
+
+object bsonReader extends SimpleBsonReaderInterpreter with ComplexBsonReaderInterpreter with FieldBsonReaderInterpreter

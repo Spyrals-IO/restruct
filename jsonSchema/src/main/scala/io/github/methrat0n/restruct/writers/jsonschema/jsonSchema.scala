@@ -1,0 +1,3 @@
+package io.github.methrat0n.restruct.writers.jsonschema
+
+object jsonSchema extends SimpleJsonSchemaWriterInterpreter with ComplexJsonSchemaWriterInterpreter with FieldJsonSchemaWriterInterpreter

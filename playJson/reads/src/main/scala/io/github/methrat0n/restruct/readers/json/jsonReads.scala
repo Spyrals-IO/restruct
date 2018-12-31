@@ -1,0 +1,3 @@
+package io.github.methrat0n.restruct.readers.json
+
+object jsonReads extends SimpleJsonReaderInterpreter with ComplexJsonReaderInterpreter with FieldJsonReaderInterpreter

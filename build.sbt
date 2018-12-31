@@ -86,7 +86,8 @@ lazy val queryStringBindable = (project in file("./queryStringBindable"))
 lazy val examples = (project in file("./examples"))
   .settings(commonSettings: _*)
   .settings(name := "restruct-examples")
-  .settings(libraryDependencies += Dependencies.restruct.reads)
+  //.settings(libraryDependencies += Dependencies.restruct.reads)
+  .dependsOn(reads)
 
 lazy val commonSettings =
   Settings.scala.commonSettings ++
