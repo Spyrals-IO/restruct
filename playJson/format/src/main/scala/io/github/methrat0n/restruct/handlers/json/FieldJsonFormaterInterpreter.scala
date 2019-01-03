@@ -3,12 +3,12 @@ package io.github.methrat0n.restruct.handlers.json
 import io.github.methrat0n.restruct.core.data.constraints.Constraint
 import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, Path }
 import io.github.methrat0n.restruct.readers.json.jsonReads
-import io.github.methrat0n.restruct.writers.json.JsonWriterInterpreter
+import io.github.methrat0n.restruct.writers.json.jsonWrites
 import play.api.libs.json.Format
 
 trait FieldJsonFormaterInterpreter extends FieldAlgebra[Format] {
 
-  private[this] val writer = JsonWriterInterpreter
+  private[this] val writer = jsonWrites
   private[this] val reader = jsonReads
 
   override def required[T](path: Path, schema: Format[T], default: Option[T]): Format[T] =

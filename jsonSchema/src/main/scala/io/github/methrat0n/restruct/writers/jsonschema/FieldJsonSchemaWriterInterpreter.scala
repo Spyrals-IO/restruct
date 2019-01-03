@@ -2,12 +2,12 @@ package io.github.methrat0n.restruct.writers.jsonschema
 
 import io.github.methrat0n.restruct.core.data.constraints.Constraint
 import io.github.methrat0n.restruct.core.data.schema._
-import io.github.methrat0n.restruct.writers.json.JsonWriterInterpreter
+import io.github.methrat0n.restruct.writers.json.jsonWrites
 import play.api.libs.json._
 
 trait FieldJsonSchemaWriterInterpreter extends FieldAlgebra[JsonSchemaWriter] {
 
-  private val writer = JsonWriterInterpreter
+  private val writer = jsonWrites
 
   override def required[T](path: Path, schema: JsonSchemaWriter[T], default: Option[T]): JsonSchemaWriter[T] =
     (
@@ -41,10 +41,10 @@ trait FieldJsonSchemaWriterInterpreter extends FieldAlgebra[JsonSchemaWriter] {
       Json.obj(
         "oneOf" -> Json.arr(a, b)
       )
-  }, JsonWriterInterpreter.either(fa._2, fb._2))
+  }, writer.either(fa._2, fb._2))
 
   override def product[A, B](fa: JsonSchemaWriter[A], fb: JsonSchemaWriter[B]): JsonSchemaWriter[(A, B)] =
-    (deepMerge(fa._1, fb._1), JsonWriterInterpreter.product(fa._2, fb._2))
+    (deepMerge(fa._1, fb._1), writer.product(fa._2, fb._2))
 
   override def pure[A](a: A): JsonSchemaWriter[A] =
     (Json.obj(), writer.pure(a))
