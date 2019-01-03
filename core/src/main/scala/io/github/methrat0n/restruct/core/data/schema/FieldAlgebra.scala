@@ -16,14 +16,13 @@ trait FieldAlgebra[F[_]] extends ComplexSchemaAlgebra[F] {
     constraint.foldLeft(schema)((schema, constraint) => verifying(schema, constraint))
 
   /**
-   * Should return a success if any found or concatenate errors.
+   * Should return a success, if any, or concatenate errors.
    *
-   * Behavior will be the following:
-   * fa == sucess => fa
-   * fa == error && fb == sucess => fb
-   * fa == error && fb == error => concatenate errors
+   * fa == sucess => fa result in Left
+   * fa == error && fb == sucess => fb result in Right
+   * fa == error && fb == error => concatenate fa and fb errors into F error handling
    *
-   * If two successes are found, only the first parameter will be taken into account.
+   * If two successes are found, fa will be choosen.
    *
    * @return F in error (depends on the implementing F) or successful F with one of the two value
    */
