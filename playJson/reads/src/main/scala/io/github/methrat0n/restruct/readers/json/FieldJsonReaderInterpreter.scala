@@ -21,9 +21,9 @@ trait FieldJsonReaderInterpreter extends FieldAlgebra[Reads] {
 
   override def or[A, B](a: Reads[A], b: Reads[B]): Reads[Either[A, B]] = Reads(jsValue =>
     a.reads(jsValue) match {
-      case aSucess @ JsSuccess(_, _) => aSucess.map(Left.apply)
+      case aSuccess @ JsSuccess(_, _) => aSuccess.map(Left.apply)
       case aError: JsError => b.reads(jsValue) match {
-        case bSucess @ JsSuccess(_, _) => bSucess.map(Right.apply)
+        case bSuccess @ JsSuccess(_, _) => bSuccess.map(Right.apply)
         case bError: JsError           => aError ++ bError
       }
     })
