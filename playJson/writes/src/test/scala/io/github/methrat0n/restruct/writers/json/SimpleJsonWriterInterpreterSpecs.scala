@@ -143,8 +143,8 @@ class SimpleJsonWriterInterpreterSpecs extends FlatSpec with Matchers {
   it should "write boolean as JsBoolean" in {
     val booleanWriter = boolean.bind(jsonWrites)
 
-    val found = booleanWriter.writes(true)
-    val expect = JsBoolean(true)
+    val found = booleanWriter.writes(booleanTest)
+    val expect = JsBoolean(booleanTest)
     found shouldBe expect
   }
   it should "write the same than the default boolean writer" in {
@@ -163,9 +163,9 @@ class SimpleJsonWriterInterpreterSpecs extends FlatSpec with Matchers {
     char.bind(jsonWrites)
   }
   it should "write char as JsString" in {
-    val booleanWriter = char.bind(jsonWrites)
+    val charWriter = char.bind(jsonWrites)
 
-    val found = booleanWriter.writes(charTest)
+    val found = charWriter.writes(charTest)
     val expect = JsString(charTest.toString)
     found shouldBe expect
   }
