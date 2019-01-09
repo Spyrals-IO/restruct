@@ -9,7 +9,7 @@ class ComplexJsonWriterInterpreterSpecs extends FlatSpec with Matchers {
   private val stringList = List("string", "string")
   private val intList = List(0, 1)
 
-  behavior of "QueryStringBindable for empty list"
+  behavior of "JsonWriterInterpreter for empty list"
 
   it should "write an empty list to an empty JsArray" in {
     val emptyStringListWriter = list(string).bind(jsonWrites)
