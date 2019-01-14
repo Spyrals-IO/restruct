@@ -84,20 +84,23 @@ object Impl {
         abort(s"No apply function found for type ${typTag.tpe.typeSymbol.name}")
       )
       val variableNames = typApply.asMethod.paramLists.flatten
-      val variables = (1 until variableNames.length).flatMap(value => {
-        val prefix = "tupled" + ("._1" * (variableNames.length - (value + 1)))
-        List(
-          s"$prefix._1",
-          s"$prefix._2",
-        )
-      })
+      val variables = variableNames match {
+          case List(_) => List("tupled")
+          case list => (1 until list.length).flatMap(value => {
+            val prefix = "tupled" + ("._1" * (list.length - (value + 1)))
+            List(
+              s"$prefix._1",
+              s"$prefix._2",
+            )
+          })
+        }
 
       val tupledClause = {
         val acessedVariables = variableNames.map(name => s"typ.${name.name.decodedName.toString}")
-        val firstVariable = acessedVariables.head
-        val nextVariables = acessedVariables.tail
-        ("(" * (variableNames.length - 1)) + firstVariable + nextVariables.mkString(start = ", ", sep = "), ", end = ")")
-      }
+        acessedVariables.tail match {
+          case Nil => acessedVariables.head
+          case tail => ("(" * (variableNames.length - 1)) + acessedVariables.head + tail.mkString(start = ", ", sep = "), ", end = ")")
+      }}
 
       c.Expr[Schema[Typ]](q"""
         import scala.language.higherKinds
