@@ -17,8 +17,6 @@ trait FieldAlgebra[F[_]] extends ComplexSchemaAlgebra[F] {
 
   def either[A, B](fa: F[A], fb: F[B]): F[Either[A, B]]
 
-  def pure[A](a: A): F[A]
-
   def imap[A, B](fa: F[A])(f: A => B)(g: B => A): F[B]
 
   def product[A, B](fa: F[A], fb: F[B]): F[(A, B)]

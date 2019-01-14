@@ -34,12 +34,6 @@ trait FieldBsonFormaterInterpreter extends FieldAlgebra[BsonHandler] {
       writer.imap(fa)(f)(g).write
     )
 
-  override def pure[T](t: T): BsonHandler[T] =
-    BsonHandler(
-      reader.pure(t).read,
-      writer.pure(t).write
-    )
-
   override def either[A, B](a: BsonHandler[A], b: BsonHandler[B]): BsonHandler[Either[A, B]] =
     BsonHandler(
       reader.either(a, b).read,

@@ -93,9 +93,4 @@ trait FieldQueryStringBindableInterpreter extends FieldAlgebra[QueryStringBindab
       }
   }
 
-  override def pure[A](a: A): QueryStringBindable[A] = new QueryStringBindable[A] {
-    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, A]] = Some(Right(a))
-
-    override def unbind(key: String, value: A): String = throw new RuntimeException("Cannot unbind a pure value")
-  }
 }
