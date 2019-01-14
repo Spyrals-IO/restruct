@@ -46,9 +46,6 @@ trait FieldJsonSchemaWriterInterpreter extends FieldAlgebra[JsonSchemaWriter] {
   override def product[A, B](fa: JsonSchemaWriter[A], fb: JsonSchemaWriter[B]): JsonSchemaWriter[(A, B)] =
     (deepMerge(fa._1, fb._1), writer.product(fa._2, fb._2))
 
-  override def pure[A](a: A): JsonSchemaWriter[A] =
-    (Json.obj(), writer.pure(a))
-
   override def imap[A, B](fa: JsonSchemaWriter[A])(f: A => B)(g: B => A): JsonSchemaWriter[B] =
     (fa._1, writer.imap(fa._2)(f)(g))
 

@@ -50,9 +50,6 @@ trait FieldConfigInterpreter extends FieldAlgebra[ConfigLoader] {
     )
   }
 
-  override def pure[A](a: A): ConfigLoader[A] = (config: Config, configPath: String) =>
-    a
-
   import collection.JavaConverters._
   private def buildConfigurationFromPath(path: Path, config: Config, rootPath: String) =
     Configuration(path.steps.tail.foldLeft(path.steps.head match {

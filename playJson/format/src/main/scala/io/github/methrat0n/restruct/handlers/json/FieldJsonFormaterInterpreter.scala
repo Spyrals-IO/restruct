@@ -23,12 +23,6 @@ trait FieldJsonFormaterInterpreter extends FieldAlgebra[Format] {
       writer.verifying(schema, constraint)
     )
 
-  override def pure[T](t: T): Format[T] =
-    Format(
-      reader.pure(t),
-      writer.pure(t)
-    )
-
   override def imap[A, B](fa: Format[A])(f: A => B)(g: B => A): Format[B] =
     Format(
       reader.imap(fa)(f)(g),

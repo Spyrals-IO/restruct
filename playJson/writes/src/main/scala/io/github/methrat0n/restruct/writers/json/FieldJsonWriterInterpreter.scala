@@ -27,9 +27,6 @@ trait FieldJsonWriterInterpreter extends FieldAlgebra[Writes] {
       case (selected, _)                      => selected
     }
 
-  override def pure[T](t: T): Writes[T] =
-    Writes(_ => Json.obj())
-
   import play.api.libs.functional.syntax._
   override def imap[A, B](fa: Writes[A])(f: A => B)(g: B => A): Writes[B] =
     fa.contramap(g)

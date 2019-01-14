@@ -21,9 +21,6 @@ trait FieldBsonReaderInterpreter extends FieldAlgebra[BsonReader] {
   override def imap[A, B](fa: BsonReader[A])(f: A => B)(g: B => A): BsonReader[B] =
     fa.afterRead[B](f)
 
-  override def pure[T](t: T): BsonReader[T] =
-    BsonReader[T](_ => t)
-
   override def either[A, B](fa: BsonReader[A], fb: BsonReader[B]): BsonReader[Either[A, B]] =
     BSONReader[BSONValue, Either[A, B]](bsonValue => fa.asInstanceOf[BSONReader[BSONValue, A]].readOpt(bsonValue) match {
       case Some(a) => Left(a)

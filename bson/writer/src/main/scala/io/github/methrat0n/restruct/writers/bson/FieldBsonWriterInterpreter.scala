@@ -51,8 +51,4 @@ trait FieldBsonWriterInterpreter extends FieldAlgebra[BsonWriter] {
   override def imap[A, B](fa: BsonWriter[A])(f: A => B)(g: B => A): BsonWriter[B] =
     fa.beforeWrite[B](g)
 
-  override def pure[T](a: T): BsonWriter[T] = BsonWriter(
-    _ => BSONDocument.empty
-  )
-
 }

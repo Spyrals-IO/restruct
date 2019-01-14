@@ -16,8 +16,6 @@ trait FieldJsonReaderInterpreter extends FieldAlgebra[Reads] {
   override def verifying[T](schema: Reads[T], constraint: Constraint[T]): Reads[T] =
     schema.filter(JsonValidationError(s"error.constraints.${constraint.name}", constraint.args: _*))(constraint.validate)
 
-  override def pure[T](a: T): Reads[T] = Reads.pure(a)
-
   override def imap[A, B](fa: Reads[A])(f: A => B)(g: B => A): Reads[B] =
     fa.map(f)
 
