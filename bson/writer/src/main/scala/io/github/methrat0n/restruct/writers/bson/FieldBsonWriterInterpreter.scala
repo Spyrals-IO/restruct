@@ -8,7 +8,7 @@ trait FieldBsonWriterInterpreter extends FieldAlgebra[BsonWriter] {
 
   override def optional[T](path: Path, schema: BsonWriter[T], default: Option[Option[T]]): BsonWriter[Option[T]] =
     BsonWriter(
-      option => path.steps.toList.foldRight(option.map(schema.asInstanceOf[BSONWriter[T, BSONDocument]].write))((step, acc) => step match {
+      option => path.steps.toList.foldRight(option.map(schema.asInstanceOf[BSONWriter[T, BSONValue]].write))((step, acc) => step match {
         case StringStep(name) => Some(BSONDocument(
           name -> acc
         ))
@@ -20,7 +20,7 @@ trait FieldBsonWriterInterpreter extends FieldAlgebra[BsonWriter] {
 
   override def required[T](path: Path, schema: BsonWriter[T], default: Option[T]): BsonWriter[T] =
     BsonWriter(
-      required => path.steps.toList.foldRight(schema.asInstanceOf[BSONWriter[T, BSONDocument]].write(required))((step, acc) => step match {
+      required => path.steps.toList.foldRight(schema.asInstanceOf[BSONWriter[T, BSONValue]].write(required))((step, acc) => step match {
         case StringStep(name) => BSONDocument(
           name -> acc
         )
