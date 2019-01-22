@@ -9,16 +9,16 @@ import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
 trait SimpleBsonWriterInterpreter extends SimpleSchemaAlgebra[BsonWriter] {
 
   override def charSchema: BsonWriter[Char] =
-    BsonWriter(char => BSONString.apply(char.toString))
+    BsonWriter(char => BSONString(char.toString))
 
   override def byteSchema: BsonWriter[Byte] =
-    BsonWriter(byte => BSONInteger.apply(byte.toInt))
+    BsonWriter(byte => BSONInteger(byte.toInt))
 
   override def shortSchema: BsonWriter[Short] =
-    BsonWriter(short => BSONInteger.apply(short.toInt))
+    BsonWriter(short => BSONInteger(short.toInt))
 
   override def floatSchema: BsonWriter[Float] =
-    BsonWriter(float => BSONDouble.apply(float.toDouble))
+    BsonWriter(float => BSONDouble(float.toDouble))
 
   override def decimalSchema: BsonWriter[Double] =
     DefaultBSONHandlers.BSONDoubleHandler
@@ -33,7 +33,7 @@ trait SimpleBsonWriterInterpreter extends SimpleSchemaAlgebra[BsonWriter] {
     DefaultBSONHandlers.BSONLongHandler
 
   override def bigIntSchema: BsonWriter[BigInt] =
-    BsonWriter(bigInt => BSONDecimal.parse(bigInt.toString).get)
+    BsonWriter(bigInt => BSONDecimal.fromBigDecimal(BigDecimal(bigInt)).get)
 
   override def booleanSchema: BsonWriter[Boolean] =
     DefaultBSONHandlers.BSONBooleanHandler
@@ -45,8 +45,8 @@ trait SimpleBsonWriterInterpreter extends SimpleSchemaAlgebra[BsonWriter] {
     BsonWriter(zoned => BSONDateTime(zoned.get(ChronoField.OFFSET_SECONDS)))
 
   override def timeSchema: BsonWriter[LocalTime] =
-    BsonWriter(local => BSONDateTime(local.getLong(ChronoField.OFFSET_SECONDS)))
+    BsonWriter(local => BSONDateTime(local.getLong(ChronoField.SECOND_OF_DAY)))
 
   override def dateSchema: BsonWriter[LocalDate] =
-    BsonWriter(date => BSONDateTime(date.getLong(ChronoField.OFFSET_SECONDS) / 86400)) //number of second in a day
+    BsonWriter(date => BSONDateTime(date.getLong(ChronoField.EPOCH_DAY) * 86400)) //Number of second in one day
 }
