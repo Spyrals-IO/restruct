@@ -1,10 +1,11 @@
 package io.github.methrat0n.restruct.writers.bson
 
 import java.time.temporal.ChronoField
-import java.time.{ LocalDate, LocalTime, ZonedDateTime }
+import java.time.{LocalDate, LocalTime, ZonedDateTime}
 
+import bsonWriter
 import io.github.methrat0n.restruct.schema.Syntax._
-import org.scalatest.{ FlatSpec, Matchers }
+import org.scalatest.{FlatSpec, Matchers}
 import reactivemongo.bson._
 
 class SimpleBsonWriterInterpreterSpecs extends FlatSpec with Matchers {

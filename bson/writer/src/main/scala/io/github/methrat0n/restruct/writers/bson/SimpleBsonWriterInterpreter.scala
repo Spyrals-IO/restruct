@@ -3,8 +3,8 @@ package io.github.methrat0n.restruct.writers.bson
 import java.time.temporal.ChronoField
 import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 
-import reactivemongo.bson.{ BSONDateTime, BSONDecimal, BSONDouble, BSONInteger, BSONString, DefaultBSONHandlers }
 import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
+import reactivemongo.bson.{ BSONDateTime, BSONDecimal, BSONDouble, BSONInteger, BSONString, DefaultBSONHandlers }
 
 trait SimpleBsonWriterInterpreter extends SimpleSchemaAlgebra[BsonWriter] {
 

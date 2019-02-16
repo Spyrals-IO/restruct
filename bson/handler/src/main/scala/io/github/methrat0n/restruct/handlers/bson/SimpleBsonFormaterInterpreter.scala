@@ -1,6 +1,6 @@
 package io.github.methrat0n.restruct.handlers.bson
 
-import java.time.{ LocalDate, LocalTime, ZonedDateTime }
+import java.time.{LocalDate, LocalTime, ZonedDateTime}
 
 import reactivemongo.bson.DefaultBSONHandlers
 import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
