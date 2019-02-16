@@ -37,7 +37,7 @@ trait SimpleBsonReaderInterpreter extends SimpleSchemaAlgebra[BsonReader] {
   override def decimalSchema: BsonReader[Double] =
     BsonReader {
       case double: BSONDouble => double.value
-      case int: BSONInteger => int.value
+      case int: BSONInteger   => int.value
       case other              => throw new RuntimeException(s"Cannot parse $other as a double")
     }
 
@@ -57,9 +57,9 @@ trait SimpleBsonReaderInterpreter extends SimpleSchemaAlgebra[BsonReader] {
 
   override def longSchema: BsonReader[Long] =
     BsonReader {
-      case long: BSONLong => long.value
+      case long: BSONLong   => long.value
       case int: BSONInteger => int.value
-      case other          => throw new RuntimeException(s"Cannot parse $other as a long")
+      case other            => throw new RuntimeException(s"Cannot parse $other as a long")
     }
 
   override def bigIntSchema: BsonReader[BigInt] =
@@ -88,17 +88,17 @@ trait SimpleBsonReaderInterpreter extends SimpleSchemaAlgebra[BsonReader] {
 
   override def timeSchema: BsonReader[LocalTime] =
     BsonReader {
-      case time: BSONString => Try { LocalTime.parse(time.value, DateTimeFormatter.ISO_LOCAL_TIME) }.getOrElse(throw new RuntimeException(s"cannot parse $time as a time"))
-      case time: BSONLong   => LocalTime.ofSecondOfDay(time.value)
-      case time: BSONInteger   => LocalTime.ofSecondOfDay(time.value)
-      case other            => throw new RuntimeException(s"cannot parse $other as a time")
+      case time: BSONString  => Try { LocalTime.parse(time.value, DateTimeFormatter.ISO_LOCAL_TIME) }.getOrElse(throw new RuntimeException(s"cannot parse $time as a time"))
+      case time: BSONLong    => LocalTime.ofSecondOfDay(time.value)
+      case time: BSONInteger => LocalTime.ofSecondOfDay(time.value)
+      case other             => throw new RuntimeException(s"cannot parse $other as a time")
     }
 
   override def dateSchema: BsonReader[LocalDate] =
     BsonReader {
-      case date: BSONString => Try { LocalDate.parse(date.value, DateTimeFormatter.ISO_LOCAL_DATE) }.getOrElse(throw new RuntimeException(s"cannot parse $date as a date"))
-      case date: BSONLong   => LocalDate.ofEpochDay(date.value)
-      case date: BSONInteger   => LocalDate.ofEpochDay(date.value)
-      case other            => throw new RuntimeException(s"cannot parse $other as a date")
+      case date: BSONString  => Try { LocalDate.parse(date.value, DateTimeFormatter.ISO_LOCAL_DATE) }.getOrElse(throw new RuntimeException(s"cannot parse $date as a date"))
+      case date: BSONLong    => LocalDate.ofEpochDay(date.value)
+      case date: BSONInteger => LocalDate.ofEpochDay(date.value)
+      case other             => throw new RuntimeException(s"cannot parse $other as a date")
     }
 }

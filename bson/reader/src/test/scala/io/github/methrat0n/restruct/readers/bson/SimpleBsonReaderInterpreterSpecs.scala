@@ -26,9 +26,9 @@ class SimpleBsonReaderInterpreterSpecs extends FlatSpec with Matchers {
   private val bigIntTest: BSONDecimal = BSONDecimal.fromBigDecimal(BigDecimal(BigInt("1267888889999111111111111"))).get
   private val dateTimeTest: BSONDateTime = BSONDateTime(1550313668)
   private val stringdateTimeTest: BSONString = BSONString("2019-02-16T11:40:26.236230+01:00[Europe/Paris]")
-  private val longdateTimeTest: BSONLong = BSONLong(1550313668)
+  private val longDateTimeTest: BSONLong = BSONLong(1550313668)
   private val stringTimeTest: BSONString = BSONString("11:42:49.348114")
-  private val longtimeTest: BSONLong = BSONLong(42207)
+  private val longTimeTest: BSONLong = BSONLong(42207)
   private val stringDateTest: BSONString = BSONString("2019-02-16")
   private val longDateTest: BSONLong = BSONLong(17943)
 
@@ -67,9 +67,9 @@ class SimpleBsonReaderInterpreterSpecs extends FlatSpec with Matchers {
     bigIntTest,
     dateTimeTest,
     stringdateTimeTest,
-    longdateTimeTest,
+    longDateTimeTest,
     stringTimeTest,
-    longtimeTest,
+    longTimeTest,
     stringDateTest,
     longDateTest
   )
@@ -91,8 +91,8 @@ class SimpleBsonReaderInterpreterSpecs extends FlatSpec with Matchers {
     bigDecimalTest,
     longTest,
     bigIntTest,
-    longdateTimeTest,
-    longtimeTest,
+    longDateTimeTest,
+    longTimeTest,
     longDateTest
   )
 
@@ -407,7 +407,7 @@ class SimpleBsonReaderInterpreterSpecs extends FlatSpec with Matchers {
     long,
     "bsonReader",
     "long",
-    allValues -- List(longTest, integerTest, byteTest, shortTest, longDateTest, longtimeTest, longdateTimeTest),
+    allValues -- List(longTest, integerTest, byteTest, shortTest, longDateTest, longTimeTest, longDateTimeTest),
     (reads, value) => reads.read(value),
     shouldBeAnError _
   )
@@ -456,8 +456,8 @@ class SimpleBsonReaderInterpreterSpecs extends FlatSpec with Matchers {
   it should "read datetime from BSONLong" in {
     val dateTimeReads = dateTime.bind(bsonReader)
 
-    val found = dateTimeReads.read(longdateTimeTest)
-    val expect = ZonedDateTime.ofInstant(Instant.ofEpochSecond(longdateTimeTest.value), ZoneId.of("UTC"))
+    val found = dateTimeReads.read(longDateTimeTest)
+    val expect = ZonedDateTime.ofInstant(Instant.ofEpochSecond(longDateTimeTest.value), ZoneId.of("UTC"))
     found shouldBe expect
   }
   shouldFail[ZonedDateTime, BsonReader, ZonedDateTime, BSONValue](
@@ -465,7 +465,7 @@ class SimpleBsonReaderInterpreterSpecs extends FlatSpec with Matchers {
     dateTime,
     "bsonReader",
     "dateTime",
-    allValues -- List(dateTimeTest, longdateTimeTest, longTest, longtimeTest, longDateTest),
+    allValues -- List(dateTimeTest, longDateTimeTest, longTest, longTimeTest, longDateTest, integerTest, byteTest, shortTest),
     (reads, value) => reads.read(value),
     shouldBeAnError _
   )
@@ -486,8 +486,8 @@ class SimpleBsonReaderInterpreterSpecs extends FlatSpec with Matchers {
   it should "read time from BSONLong within 0 - 86399999999999" in {
     val timeReads = time.bind(bsonReader)
 
-    val found = timeReads.read(longtimeTest)
-    val expect = LocalTime.ofSecondOfDay(longtimeTest.value)
+    val found = timeReads.read(longTimeTest)
+    val expect = LocalTime.ofSecondOfDay(longTimeTest.value)
     found shouldBe expect
   }
   shouldFail[LocalTime, BsonReader, LocalTime, BSONValue](
@@ -495,7 +495,7 @@ class SimpleBsonReaderInterpreterSpecs extends FlatSpec with Matchers {
     time,
     "bsonReader",
     "time",
-    allValues -- List(stringTimeTest, longtimeTest, longTest, longdateTimeTest, longDateTest),
+    allValues -- List(stringTimeTest, longTimeTest, longTest, longDateTimeTest, longDateTest, integerTest, byteTest, shortTest),
     (reads, value) => reads.read(value),
     shouldBeAnError _
   )
@@ -524,7 +524,7 @@ class SimpleBsonReaderInterpreterSpecs extends FlatSpec with Matchers {
     date,
     "bsonReader",
     "date",
-    allValues -- List(stringDateTest, longDateTest, longTest, longdateTimeTest, longtimeTest),
+    allValues -- List(stringDateTest, longDateTest, longTest, longDateTimeTest, longTimeTest, integerTest, byteTest, shortTest),
     (reads, value) => reads.read(value),
     shouldBeAnError _
   )
