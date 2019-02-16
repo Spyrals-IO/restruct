@@ -282,7 +282,7 @@ class SimpleJsonReaderInterpreterSpecs extends FlatSpec with Matchers {
     val expect = JsSuccess(floatTest.value.floatValue())
     found shouldBe expect
   }
-  it should "write the same than the default float writer" in {
+  it should "read the same than the default float reads" in {
     val derived: Reads[Float] = float.bind(jsonReads)
     val default: Reads[Float] = Reads.FloatReads
 

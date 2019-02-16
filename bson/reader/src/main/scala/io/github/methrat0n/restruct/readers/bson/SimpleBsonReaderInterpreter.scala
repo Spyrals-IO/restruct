@@ -17,31 +17,35 @@ trait SimpleBsonReaderInterpreter extends SimpleSchemaAlgebra[BsonReader] {
 
   override def byteSchema: BsonReader[Byte] =
     BsonReader {
-      case int: BSONInteger => int.value.toByte
-      case other            => throw new RuntimeException(s"Cannot parse $other as a byte")
+      case int: BSONInteger if int.value < Byte.MaxValue && int.value > Byte.MinValue => int.value.toByte
+      case other => throw new RuntimeException(s"Cannot parse $other as a byte")
     }
 
   override def shortSchema: BsonReader[Short] =
     BsonReader {
-      case int: BSONInteger => int.value.toShort
-      case other            => throw new RuntimeException(s"Cannot parse $other as a short")
+      case int: BSONInteger if int.value < Short.MaxValue && int.value > Short.MinValue => int.value.toShort
+      case other => throw new RuntimeException(s"Cannot parse $other as a short")
     }
 
   override def floatSchema: BsonReader[Float] =
     BsonReader {
-      case double: BSONDouble => double.value.toFloat
-      case other              => throw new RuntimeException(s"Cannot parse $other as a float")
+      case double: BSONDouble if double.value > Float.MinValue && double.value < Float.MaxValue => double.value.toFloat
+      case int: BSONInteger if int.value > Float.MinValue && int.value < Float.MaxValue => int.value.toFloat
+      case other => throw new RuntimeException(s"Cannot parse $other as a float")
     }
 
   override def decimalSchema: BsonReader[Double] =
     BsonReader {
       case double: BSONDouble => double.value
+      case int: BSONInteger => int.value
       case other              => throw new RuntimeException(s"Cannot parse $other as a double")
     }
 
   override def bigDecimalSchema: BsonReader[BigDecimal] =
     BsonReader {
       case decimal: BSONDecimal => BSONDecimal.toBigDecimal(decimal).get
+      case double: BSONDouble   => double.value
+      case int: BSONInteger     => int.value
       case other                => throw new RuntimeException(s"Cannot parse $other as a bigDecimal")
     }
 
@@ -54,14 +58,12 @@ trait SimpleBsonReaderInterpreter extends SimpleSchemaAlgebra[BsonReader] {
   override def longSchema: BsonReader[Long] =
     BsonReader {
       case long: BSONLong => long.value
+      case int: BSONInteger => int.value
       case other          => throw new RuntimeException(s"Cannot parse $other as a long")
     }
 
   override def bigIntSchema: BsonReader[BigInt] =
-    BsonReader {
-      case decimal: BSONDecimal => BSONDecimal.toBigDecimal(decimal).get.toBigInt()
-      case other                => throw new RuntimeException(s"Cannot parse $other as a bigDecimal")
-    }
+    bigDecimalSchema.afterRead(_.toBigIntExact().get)
 
   override def booleanSchema: BsonReader[Boolean] =
     BsonReader {
@@ -79,6 +81,8 @@ trait SimpleBsonReaderInterpreter extends SimpleSchemaAlgebra[BsonReader] {
     BsonReader {
       case dateTime: BSONDateTime => ZonedDateTime.ofInstant(Instant.ofEpochSecond(dateTime.value), ZoneId.of("UTC"))
       case dateTime: BSONString   => Try { ZonedDateTime.parse(dateTime.value, DateTimeFormatter.ISO_OFFSET_DATE_TIME) }.getOrElse(throw new RuntimeException(s"cannot parse $dateTime as a datetime"))
+      case dateTime: BSONLong     => ZonedDateTime.ofInstant(Instant.ofEpochSecond(dateTime.value), ZoneId.of("UTC"))
+      case dateTime: BSONInteger  => ZonedDateTime.ofInstant(Instant.ofEpochSecond(dateTime.value), ZoneId.of("UTC"))
       case other                  => throw new RuntimeException(s"cannot parse $other as a datetime")
     }
 
@@ -86,6 +90,7 @@ trait SimpleBsonReaderInterpreter extends SimpleSchemaAlgebra[BsonReader] {
     BsonReader {
       case time: BSONString => Try { LocalTime.parse(time.value, DateTimeFormatter.ISO_LOCAL_TIME) }.getOrElse(throw new RuntimeException(s"cannot parse $time as a time"))
       case time: BSONLong   => LocalTime.ofSecondOfDay(time.value)
+      case time: BSONInteger   => LocalTime.ofSecondOfDay(time.value)
       case other            => throw new RuntimeException(s"cannot parse $other as a time")
     }
 
@@ -93,6 +98,7 @@ trait SimpleBsonReaderInterpreter extends SimpleSchemaAlgebra[BsonReader] {
     BsonReader {
       case date: BSONString => Try { LocalDate.parse(date.value, DateTimeFormatter.ISO_LOCAL_DATE) }.getOrElse(throw new RuntimeException(s"cannot parse $date as a date"))
       case date: BSONLong   => LocalDate.ofEpochDay(date.value)
+      case date: BSONInteger   => LocalDate.ofEpochDay(date.value)
       case other            => throw new RuntimeException(s"cannot parse $other as a date")
     }
 }
