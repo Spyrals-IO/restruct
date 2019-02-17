@@ -1,6 +1,5 @@
 package io.github.methrat0n.restruct.writers.bson
 
-import bsonWriter
 import io.github.methrat0n.restruct.schema.Schema
 import io.github.methrat0n.restruct.schema.Syntax._
 import org.scalatest.{FlatSpec, Matchers}
@@ -10,7 +9,6 @@ class FieldBsonWriterInterpreterSpecs extends FlatSpec with Matchers {
 
   private val requiredString = "string".as[String]
   private val complexRequiredString = ("level one" \ "level two").as[String]
-  //private val complexRequiredStringWithIndex = ("string" \ 0).as[String]
   private val optionalString = "string".asOption[String]
 
   behavior of "BsonWriter Writes fields"
@@ -35,18 +33,6 @@ class FieldBsonWriterInterpreterSpecs extends FlatSpec with Matchers {
     )
     found shouldBe expect
   }
-  //TODO an issue will be open in play-json
-  /*it should "write an array if it's describe in the path" in {
-    val complexRequiredStringWithIndexWriter = complexRequiredStringWithIndex.bind(jsonWrites)
-
-    val found = complexRequiredStringWithIndexWriter.writes("a string")
-    val expect = Json.obj(
-      "string" -> Json.arr(Json.obj(
-        "test" -> "a string"
-      ))
-    )
-    found shouldBe expect
-  }*/
 
   it should "write optional string if present" in {
     val optionalStringWriter = optionalString.bind(bsonWriter)
