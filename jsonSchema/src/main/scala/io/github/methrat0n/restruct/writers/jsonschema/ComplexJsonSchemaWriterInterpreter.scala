@@ -8,6 +8,8 @@ trait ComplexJsonSchemaWriterInterpreter extends ComplexSchemaAlgebra[JsonSchema
 
   private val writer = jsonWrites
 
-  override def many[T](schema: JsonSchemaWriter[T]): JsonSchemaWriter[List[T]] =
-    (Json.obj("type" -> "array", "items" -> schema._1), writer.many(schema._2))
+  override def many[T](schema: JsonSchemaWriter[T]): JsonSchemaWriter[List[T]] = JsonSchemaWriter(
+    Json.obj("type" -> "array", "items" -> schema.json),
+    writer.many(schema.writer)
+  )
 }
