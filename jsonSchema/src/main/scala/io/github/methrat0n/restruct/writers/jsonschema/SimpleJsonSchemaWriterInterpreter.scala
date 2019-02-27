@@ -10,73 +10,100 @@ trait SimpleJsonSchemaWriterInterpreter extends SimpleSchemaAlgebra[JsonSchemaWr
 
   private object JsonWriter extends SimpleJsonWriterInterpreter
 
-  override def charSchema: JsonSchemaWriter[Char] =
-    (Json.obj(
+  override def charSchema: JsonSchemaWriter[Char] = JsonSchemaWriter(
+    Json.obj(
       "type" -> "string"
-    ), JsonWriter.charSchema) //TODO constraint, max size = 1
+    ),
+    JsonWriter.charSchema
+  ) //TODO constraint, max size = 1
 
-  override def byteSchema: JsonSchemaWriter[Byte] =
-    (Json.obj(
-      "type" -> "number" //TODO constaint, min -128 max 127
-    ), JsonWriter.byteSchema)
-
-  override def shortSchema: JsonSchemaWriter[Short] =
-    (Json.obj(
-      "type" -> "number" //TODO constaint, min -32768 max 32767
-    ), JsonWriter.shortSchema)
-
-  override def floatSchema: JsonSchemaWriter[Float] =
-    (Json.obj(
+  override def byteSchema: JsonSchemaWriter[Byte] = JsonSchemaWriter(
+    Json.obj(
       "type" -> "number"
-    ), JsonWriter.floatSchema)
+    ),
+    JsonWriter.byteSchema
+  ) //TODO constaint, min -128 max 127
 
-  override def decimalSchema: JsonSchemaWriter[Double] =
-    (Json.obj(
+  override def shortSchema: JsonSchemaWriter[Short] = JsonSchemaWriter(
+    Json.obj(
       "type" -> "number"
-    ), JsonWriter.decimalSchema)
+    ),
+    JsonWriter.shortSchema
+  ) //TODO constaint, min -32768 max 32767
 
-  override def bigDecimalSchema: JsonSchemaWriter[BigDecimal] =
-    (Json.obj(
+  override def floatSchema: JsonSchemaWriter[Float] = JsonSchemaWriter(
+    Json.obj(
       "type" -> "number"
-    ), JsonWriter.bigDecimalSchema)
+    ),
+    JsonWriter.floatSchema
+  )
 
-  override def integerSchema: JsonSchemaWriter[Int] =
-    (Json.obj(
+  override def decimalSchema: JsonSchemaWriter[Double] = JsonSchemaWriter(
+    Json.obj(
+      "type" -> "number"
+    ), JsonWriter.decimalSchema
+  )
+
+  override def bigDecimalSchema: JsonSchemaWriter[BigDecimal] = JsonSchemaWriter(
+    Json.obj(
+      "type" -> "number"
+    ),
+    JsonWriter.bigDecimalSchema
+  )
+
+  override def integerSchema: JsonSchemaWriter[Int] = JsonSchemaWriter(
+    Json.obj(
       "type" -> "integer"
-    ), JsonWriter.integerSchema)
+    ),
+    JsonWriter.integerSchema
+  )
 
-  override def longSchema: JsonSchemaWriter[Long] =
-    (Json.obj(
+  override def longSchema: JsonSchemaWriter[Long] = JsonSchemaWriter(
+    Json.obj(
       "type" -> "integer"
-    ), JsonWriter.longSchema)
+    ),
+    JsonWriter.longSchema
+  )
 
-  override def bigIntSchema: JsonSchemaWriter[BigInt] =
-    (Json.obj(
+  override def bigIntSchema: JsonSchemaWriter[BigInt] = JsonSchemaWriter(
+    Json.obj(
       "type" -> "integer"
-    ), JsonWriter.bigIntSchema)
+    ),
+    JsonWriter.bigIntSchema
+  )
 
-  override def booleanSchema: JsonSchemaWriter[Boolean] =
-    (Json.obj(
+  override def booleanSchema: JsonSchemaWriter[Boolean] = JsonSchemaWriter(
+    Json.obj(
       "type" -> "boolean"
-    ), JsonWriter.booleanSchema)
+    ),
+    JsonWriter.booleanSchema
+  )
 
-  override def stringSchema: JsonSchemaWriter[String] =
-    (Json.obj(
+  override def stringSchema: JsonSchemaWriter[String] = JsonSchemaWriter(
+    Json.obj(
       "type" -> "string"
-    ), JsonWriter.stringSchema)
+    ),
+    JsonWriter.stringSchema
+  )
 
-  override def dateTimeSchema: JsonSchemaWriter[ZonedDateTime] =
-    (Json.obj(
+  override def dateTimeSchema: JsonSchemaWriter[ZonedDateTime] = JsonSchemaWriter(
+    Json.obj(
       "type" -> "date-time"
-    ), JsonWriter.dateTimeSchema)
+    ),
+    JsonWriter.dateTimeSchema
+  )
 
-  override def timeSchema: JsonSchemaWriter[LocalTime] =
-    (Json.obj(
+  override def timeSchema: JsonSchemaWriter[LocalTime] = JsonSchemaWriter(
+    Json.obj(
       "type" -> "time"
-    ), JsonWriter.timeSchema)
+    ),
+    JsonWriter.timeSchema
+  )
 
-  override def dateSchema: JsonSchemaWriter[LocalDate] =
-    (Json.obj(
+  override def dateSchema: JsonSchemaWriter[LocalDate] = JsonSchemaWriter(
+    Json.obj(
       "type" -> "date"
-    ), JsonWriter.dateSchema)
+    ),
+    JsonWriter.dateSchema
+  )
 }

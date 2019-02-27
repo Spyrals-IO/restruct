@@ -1,12 +1,10 @@
 package io.github.methrat0n.restruct.writers
 
-import play.api.libs.json.{ JsArray, JsObject, Writes }
+import play.api.libs.json.{ JsArray, JsObject }
 
 import scala.collection.immutable.ListMap
 
 package object jsonschema {
-  type JsonSchemaWriter[A] = (JsObject, Writes[A])
-
   private[jsonschema] def deepMerge(current: JsObject, other: JsObject): JsObject = {
       def merge(existingObject: JsObject, otherObject: JsObject): JsObject = {
         val result = otherObject.fields.foldLeft(ListMap(existingObject.fields: _*)) {
