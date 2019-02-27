@@ -2,8 +2,6 @@
 
 Restruct let you describe your types in a unyfied syntax and derived any format from this very same syntax.
 
-Warning : This library is still in beta. Tests are not yet fully written and error may be unclear.
-
 ### Case Class
 
 First, define a field schema. Choose a name and paired it with its type :
@@ -263,19 +261,19 @@ compatible with scala and ScalaJs 2.12
 If you are using sbt add the following to your build:
 ```sbt
 libraryDependencies ++= Seq(
-  "io.github.methrat0n" %% "restruct-all" % "0.1.0", //for all the supported formats
-  "io.github.methrat0n" %% "restruct-core" % "0.1.0", //for only the internals, no format supported
-  "io.github.methrat0n" %% "restruct-query-string-bindable" % "0.1.0", //for only the play query string format
-  "io.github.methrat0n" %% "restruct-config-loader" % "0.1.0", //for only the play config format
-  "io.github.methrat0n" %% "restruct-json-schema" % "0.1.0", //for only a jsonSchema writer
-  "io.github.methrat0n" %% "restruct-play-json" % "0.1.0", //for only play json Format, Writes and Reads
-  "io.github.methrat0n" %% "restruct-play-json-reads" % "0.1.0", //for only play json Reads format
-  "io.github.methrat0n" %% "restruct-play-json-writes" % "0.1.0", //for only play json Writes format
-  "io.github.methrat0n" %% "restruct-bson" % "0.1.0", //for only reactive-mongo BSONHandler, BSONWriter and BSONReader
-  "io.github.methrat0n" %% "restruct-bson-writer" % "0.1.0", //for only reactive-mongo BSONWriter
-  "io.github.methrat0n" %% "restruct-bson-reader" % "0.1.0", //for only reactive-mongo BSONReader
+  "io.github.methrat0n" %% "restruct-all" % "1.0.0", //for all the supported formats
+  "io.github.methrat0n" %% "restruct-core" % "1.0.0", //for only the internals, no format supported
+  "io.github.methrat0n" %% "restruct-query-string-bindable" % "1.0.0", //for only the play query string format
+  "io.github.methrat0n" %% "restruct-config-loader" % "1.0.0", //for only the play config format
+  "io.github.methrat0n" %% "restruct-json-schema" % "1.0.0", //for only a jsonSchema writer
+  "io.github.methrat0n" %% "restruct-play-json" % "1.0.0", //for only play json Format, Writes and Reads
+  "io.github.methrat0n" %% "restruct-play-json-reads" % "1.0.0", //for only play json Reads format
+  "io.github.methrat0n" %% "restruct-play-json-writes" % "1.0.0", //for only play json Writes format
+  "io.github.methrat0n" %% "restruct-bson" % "1.0.0", //for only reactive-mongo BSONHandler, BSONWriter and BSONReader
+  "io.github.methrat0n" %% "restruct-bson-writer" % "1.0.0", //for only reactive-mongo BSONWriter
+  "io.github.methrat0n" %% "restruct-bson-reader" % "1.0.0", //for only reactive-mongo BSONReader
   
-  "io.github.methrat0n" %% "restruct-enumeratum" % "0.1.0" //for enumeratum helper
+  "io.github.methrat0n" %% "restruct-enumeratum" % "1.0.0" //for enumeratum helper
 )
 ```
 

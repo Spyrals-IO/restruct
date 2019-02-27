@@ -24,7 +24,7 @@ trait FieldJsonReaderInterpreter extends FieldAlgebra[Reads] {
       case aSuccess @ JsSuccess(_, _) => aSuccess.map(Left.apply)
       case aError: JsError => b.reads(jsValue) match {
         case bSuccess @ JsSuccess(_, _) => bSuccess.map(Right.apply)
-        case bError: JsError           => aError ++ bError
+        case bError: JsError            => aError ++ bError
       }
     })
 

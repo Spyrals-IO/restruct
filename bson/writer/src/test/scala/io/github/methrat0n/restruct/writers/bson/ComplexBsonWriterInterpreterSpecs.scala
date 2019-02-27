@@ -1,7 +1,7 @@
 package io.github.methrat0n.restruct.writers.bson
 
 import io.github.methrat0n.restruct.schema.Syntax._
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.{ FlatSpec, Matchers }
 import reactivemongo.bson._
 
 class ComplexBsonWriterInterpreterSpecs extends FlatSpec with Matchers {
