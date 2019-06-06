@@ -40,9 +40,6 @@ object SyntaxExample extends App {
     case play.api.libs.json.JsError(errors)     => println(errors)
   }*/
 
-  implicitly[PathBuilder[PathNil]](PathBuilder.emptyStep2JsPath)
-  implicitly[PathBuilder[PathNil \ Int]]
-  implicitly[PathBuilder[PathNil \ Int \ String]]
   (Path \ 0 \ "dt").as[BigInt].bind[Reads].reads(Json.parse("111")) match {
     case play.api.libs.json.JsSuccess(value, _) => println(value)
     case play.api.libs.json.JsError(errors)     => println(errors)
