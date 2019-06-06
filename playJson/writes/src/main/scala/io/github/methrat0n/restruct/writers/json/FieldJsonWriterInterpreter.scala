@@ -1,7 +1,8 @@
 package io.github.methrat0n.restruct.writers.json
 
-import io.github.methrat0n.restruct.core.data.constraints.Constraint
-import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, IntStep, Path, StringStep }
+import io.github.methrat0n.restruct.constraints.Constraint
+import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, Path }
+import io.github.methrat0n.restruct.schema.{ IntStep, StringStep }
 import play.api.libs.json._
 
 trait FieldJsonWriterInterpreter extends FieldAlgebra[Writes] {

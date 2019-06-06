@@ -5,7 +5,6 @@ import io.github.methrat0n.restruct.readers.config.FieldConfigInterpreterSpecs.{
 import io.github.methrat0n.restruct.schema.Schema
 import org.scalatest.{ FlatSpec, Matchers }
 import play.api.Configuration
-import io.github.methrat0n.restruct.schema.Syntax._
 
 class FieldConfigInterpreterSpecs extends FlatSpec with Matchers {
   private val configuration = Configuration(ConfigFactory.load("test.conf"))

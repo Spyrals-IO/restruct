@@ -1,7 +1,6 @@
 package io.github.methrat0n.restruct.writers.json
 
 import org.scalatest.{ FlatSpec, Matchers }
-import io.github.methrat0n.restruct.schema.Syntax._
 import play.api.libs.json._
 
 class ComplexJsonWriterInterpreterSpecs extends FlatSpec with Matchers {

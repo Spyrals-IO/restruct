@@ -1,7 +1,6 @@
 package io.github.methrat0n.restruct.constraints
 
 import enumeratum.Enum
-import io.github.methrat0n.restruct.core.data.constraints.Constraint
 
 object EnumeratumConstraints {
   final case class EnumConstraint[E <: Enum[_]](enum: E) extends Constraint[String] {

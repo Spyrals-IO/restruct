@@ -2,7 +2,6 @@ package io.github.methrat0n.restruct.readers.json
 
 import io.github.methrat0n.restruct.schema.Schema
 import org.scalatest.{ FlatSpec, Matchers }
-import io.github.methrat0n.restruct.schema.Syntax._
 import play.api.libs.json._
 
 class FieldJsonReaderInterpreterSpecs extends FlatSpec with Matchers {

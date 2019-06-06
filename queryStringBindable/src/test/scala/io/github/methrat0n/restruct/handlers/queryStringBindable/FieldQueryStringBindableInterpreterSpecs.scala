@@ -2,7 +2,6 @@ package io.github.methrat0n.restruct.handlers.queryStringBindable
 
 import io.github.methrat0n.restruct.schema.Schema
 import org.scalatest.{FlatSpec, Matchers}
-import io.github.methrat0n.restruct.schema.Syntax._
 
 class FieldQueryStringBindableInterpreterSpecs extends FlatSpec with Matchers {
   private val query = Map(

@@ -2,8 +2,6 @@ package io.github.methrat0n.restruct.handlers.queryStringBindable
 
 import org.scalatest.{ FlatSpec, Matchers }
 
-import io.github.methrat0n.restruct.schema.Syntax._
-
 class ComplexQueryStringBindableInterpreterSpecs extends FlatSpec with Matchers {
   private val query = Map(
     "emptyList" -> Seq(),

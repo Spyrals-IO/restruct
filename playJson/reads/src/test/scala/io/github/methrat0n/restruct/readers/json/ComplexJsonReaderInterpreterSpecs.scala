@@ -1,6 +1,5 @@
 package io.github.methrat0n.restruct.readers.json
 
-import io.github.methrat0n.restruct.schema.Syntax._
 import org.scalatest.{ FlatSpec, Matchers }
 import play.api.libs.json._
 

@@ -1,4 +1,4 @@
-package io.github.methrat0n.restruct.core.data.constraints
+package io.github.methrat0n.restruct.constraints
 
 trait Constraint[T] {
   def name: String = this.getClass.getSimpleName

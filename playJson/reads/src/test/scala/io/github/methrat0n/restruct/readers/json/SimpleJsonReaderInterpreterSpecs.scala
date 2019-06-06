@@ -4,7 +4,6 @@ import java.time._
 
 import io.github.methrat0n.restruct.core.data.schema.FieldAlgebra
 import io.github.methrat0n.restruct.schema.Schema
-import io.github.methrat0n.restruct.schema.Syntax._
 import org.scalatest.{ FlatSpec, Matchers, Outcome, Succeeded }
 import play.api.libs.json._
 

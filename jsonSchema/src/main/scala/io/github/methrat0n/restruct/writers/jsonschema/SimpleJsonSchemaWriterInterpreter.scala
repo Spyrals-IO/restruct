@@ -1,8 +1,6 @@
 package io.github.methrat0n.restruct.writers.jsonschema
 
 import java.time.{ LocalDate, LocalTime, ZonedDateTime }
-
-import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
 import io.github.methrat0n.restruct.writers.json.SimpleJsonWriterInterpreter
 import play.api.libs.json.Json
 

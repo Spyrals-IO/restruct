@@ -1,8 +1,6 @@
 package io.github.methrat0n.restruct.handlers.queryStringBindable
 
 import java.time.{ LocalDate, LocalTime, ZonedDateTime }
-
-import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
 import play.api.mvc.QueryStringBindable
 
 import scala.util.Try

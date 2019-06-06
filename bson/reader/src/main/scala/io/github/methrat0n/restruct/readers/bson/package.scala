@@ -1,6 +1,6 @@
 package io.github.methrat0n.restruct.readers
 
-import io.github.methrat0n.restruct.core.data.schema.{ IntStep, Path, StringStep }
+import io.github.methrat0n.restruct.schema.{ IntStep, Path, StringStep }
 import reactivemongo.bson.{ BSONArray, BSONDocument, BSONElementSet, BSONReader, BSONValue }
 
 package object bson {

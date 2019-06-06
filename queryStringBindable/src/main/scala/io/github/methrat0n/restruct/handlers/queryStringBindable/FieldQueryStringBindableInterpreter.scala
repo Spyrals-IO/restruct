@@ -1,7 +1,8 @@
 package io.github.methrat0n.restruct.handlers.queryStringBindable
 
-import io.github.methrat0n.restruct.core.data.constraints.Constraint
-import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, Path, StringStep }
+import io.github.methrat0n.restruct.constraints.Constraint
+import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, Path }
+import io.github.methrat0n.restruct.schema.StringStep
 import play.api.mvc.QueryStringBindable
 
 trait FieldQueryStringBindableInterpreter extends FieldAlgebra[QueryStringBindable] {

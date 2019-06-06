@@ -4,7 +4,6 @@ import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 
 import org.scalatest.{ FlatSpec, Matchers }
 import play.api.libs.json.{ JsBoolean, JsNumber, JsString, Writes }
-import io.github.methrat0n.restruct.schema.Syntax._
 
 class SimpleJsonWriterInterpreterSpecs extends FlatSpec with Matchers {
 

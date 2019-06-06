@@ -1,7 +1,7 @@
 package io.github.methrat0n.restruct.readers.bson
 
-import io.github.methrat0n.restruct.core.data.constraints.Constraint
-import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, NoMatchException, Path }
+import io.github.methrat0n.restruct.constraints.Constraint
+import io.github.methrat0n.restruct.schema.{ NoMatchException, Path }
 import reactivemongo.bson.{ BSONReader, BSONValue }
 
 import scala.util.{ Failure, Success }

@@ -11,7 +11,7 @@ class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
 
   behavior of "ConfigLoader for strings"
 
-  import io.github.methrat0n.restruct.schema.Syntax.string
+  import .string
 
   "ConfigLoader" should "find a loader for strings" in {
     string.bind(configLoader)
@@ -36,7 +36,7 @@ class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
 
   behavior of "ConfigLoader for decimal"
 
-  import io.github.methrat0n.restruct.schema.Syntax.decimal
+  import .decimal
 
   "ConfigLoader" should "find a loader for decimals" in {
     decimal.bind(configLoader)
@@ -61,7 +61,7 @@ class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
 
   behavior of "ConfigLoader for integer"
 
-  import io.github.methrat0n.restruct.schema.Syntax.integer
+  import .integer
 
   "ConfigLoader" should "find a loader for integers" in {
     integer.bind(configLoader)
@@ -86,7 +86,7 @@ class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
 
   behavior of "ConfigLoader for boolean"
 
-  import io.github.methrat0n.restruct.schema.Syntax.boolean
+  import .boolean
 
   "ConfigLoader" should "find a loader for booleans" in {
     boolean.bind(configLoader)
@@ -111,7 +111,7 @@ class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
 
   behavior of "ConfigLoader for char"
 
-  import io.github.methrat0n.restruct.schema.Syntax.char
+  import .char
 
   "configLoader" should "find a loader for chars" in {
     char.bind(configLoader)
@@ -126,7 +126,7 @@ class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
 
   behavior of "ConfigLoader for byte"
 
-  import io.github.methrat0n.restruct.schema.Syntax.byte
+  import .byte
 
   "ConfigLoader" should "find a loader for bytes" in {
     byte.bind(configLoader)
@@ -141,7 +141,7 @@ class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
 
   behavior of "ConfigLoader for short"
 
-  import io.github.methrat0n.restruct.schema.Syntax.short
+  import .short
 
   "ConfigLoader" should "find a loader for shorts" in {
     short.bind(configLoader)
@@ -156,7 +156,7 @@ class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
 
   behavior of "ConfigLoader for float"
 
-  import io.github.methrat0n.restruct.schema.Syntax.float
+  import .float
 
   "ConfigLoader" should "find a loader for floats" in {
     float.bind(configLoader)
@@ -171,7 +171,7 @@ class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
 
   behavior of "ConfigLoader for BigDecimal"
 
-  import io.github.methrat0n.restruct.schema.Syntax.bigDecimal
+  import .bigDecimal
 
   "ConfigLoader" should "find a loader for bigDecimal" in {
     bigDecimal.bind(configLoader)
@@ -186,7 +186,7 @@ class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
 
   behavior of "ConfigLoader for Long"
 
-  import io.github.methrat0n.restruct.schema.Syntax.long
+  import .long
 
   "ConfigLoader" should "find a loader for long" in {
     long.bind(configLoader)
@@ -211,7 +211,7 @@ class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
 
   behavior of "ConfigLoader for bigInt"
 
-  import io.github.methrat0n.restruct.schema.Syntax.bigInt
+  import .bigInt
 
   "ConfigLoader" should "find a loader for bigInt" in {
     bigInt.bind(configLoader)
@@ -226,7 +226,7 @@ class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
 
   behavior of "ConfigLoader for dateTime"
 
-  import io.github.methrat0n.restruct.schema.Syntax.dateTime
+  import .dateTime
 
   "ConfigLoader" should "find a loader for dateTime" in {
     dateTime.bind(configLoader)
@@ -241,7 +241,7 @@ class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
 
   behavior of "ConfigLoader for time"
 
-  import io.github.methrat0n.restruct.schema.Syntax.time
+  import .time
 
   "ConfigLoader" should "find a loader for time" in {
     time.bind(configLoader)
@@ -256,7 +256,7 @@ class SimpleConfigInterpreterSpecs extends FlatSpec with Matchers {
 
   behavior of "ConfigLoader for date"
 
-  import io.github.methrat0n.restruct.schema.Syntax.date
+  import .date
 
   "ConfigLoader" should "find a loader for date" in {
     date.bind(configLoader)
