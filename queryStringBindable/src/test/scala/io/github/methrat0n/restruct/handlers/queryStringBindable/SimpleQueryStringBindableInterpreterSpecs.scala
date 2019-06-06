@@ -7,7 +7,6 @@ import io.github.methrat0n.restruct.core.data.schema.FieldAlgebra
 import io.github.methrat0n.restruct.schema.Schema
 import org.scalatest.{ time => _, _ }
 import play.api.mvc.QueryStringBindable
-import io.github.methrat0n.restruct.schema.Syntax._
 
 import scala.collection.mutable.ListBuffer
 

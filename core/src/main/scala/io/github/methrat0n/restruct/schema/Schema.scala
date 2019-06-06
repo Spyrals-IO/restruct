@@ -1,39 +1,42 @@
 package io.github.methrat0n.restruct.schema
 
-import io.github.methrat0n.restruct.core.data.constraints.Constraint
-import io.github.methrat0n.restruct.core.data.schema.FieldAlgebra
+import io.github.methrat0n.restruct.constraints.Constraint
+import io.github.methrat0n.restruct.schema.Schemas._
 
-import scala.language.higherKinds
+import scala.collection.GenIterable
 import scala.reflect.macros.blackbox
 import scala.language.experimental.macros
 
-trait Schema[A] { self =>
-  def constraintedBy(constraint: Constraint[A]): Schema[A] = new Schema[A] {
-    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[A] =
-      algebra.verifying(self.bind(algebra), constraint)
-  }
-  def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[A]
+private[schema] trait Schema[A] { self =>
 
-  def and[B](schema: Schema[B]): Schema[(A, B)] = new Schema[(A, B)] {
-    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[(A, B)] =
-      algebra.product(self.bind(algebra), schema.bind(algebra))
-  }
+  type OwnInterpreter[Format[_]] <: Interpreter[Format, A]
 
-  def or[B](schema: Schema[B]): Schema[Either[A, B]] = new Schema[Either[A, B]] {
-    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[Either[A, B]] =
-      algebra.or(self.bind(algebra), schema.bind(algebra))
-  }
+  def bind[Format[_]](implicit algebra: OwnInterpreter[Format]): Format[A]
 
-  def inmap[B](f: A => B)(g: B => A): Schema[B] = new Schema[B] {
-    override def bind[FORMAT[_]](algebra: FieldAlgebra[FORMAT]): FORMAT[B] =
-      algebra.imap(self.bind(algebra))(f)(g)
-  }
+  private[schema] def secretBind[Format[_]](implicit algebra: Interpreter[Format, A]): Format[A] =
+    bind[Format](algebra.asInstanceOf[self.OwnInterpreter[Format]])
+
+  def constraintedBy(constraint: Constraint[A]): ConstrainedSchema[A] = ConstrainedSchema(self, constraint)
+
+  def and[B](schema: Schema[B]): And[A, B] = And(self, schema)
+
+  def or[B](schema: Schema[B]): Or[A, B] = Or(self, schema)
+
+  def inmap[B](f: A => B)(g: B => A): InvariantSchema[A, B] = InvariantSchema(self, f, g)
 }
 
-object Schema {
+object Schema extends LowPriorityImplicits {
+
   def apply[Typ, Composition](schema: Schema[Composition]): Schema[Typ] = macro Impl.simple[Typ, Composition]
 
   def of[Type]: Schema[Type] = macro Impl.simpleOf[Type]
+}
+
+private[schema] trait LowPriorityImplicits {
+
+  implicit def simple[Type]: SimpleSchema[Type] = new SimpleSchema[Type]
+
+  implicit def many[Type, Collection[A] <: GenIterable[A]](implicit schema: Schema[Type]): ManySchema[Collection, Type] = new ManySchema(schema)
 }
 
 object StrictSchema {
@@ -243,8 +246,8 @@ object Impl {
            |$sub.bind(algebra),
            |io.github.methrat0n.restruct.schema.RequiredField(
            |  io.github.methrat0n.restruct.core.data.schema.Path(
-           |    io.github.methrat0n.restruct.core.data.schema.StepList(
-           |      io.github.methrat0n.restruct.core.data.schema.StringStep("__type"),List.empty)
+           |    io.github.methrat0n.restruct.schema.StepList(
+           |      io.github.methrat0n.restruct.schema.StringStep("__type"),List.empty)
            |    ),
            |    io.github.methrat0n.restruct.schema.Syntax.string.constraintedBy(
            |      io.github.methrat0n.restruct.core.data.constraints.Constraints.EqualConstraint("${parts((parts.length - 1) - index).typeSymbol.name.decodedName.toString}")
@@ -303,8 +306,8 @@ object Impl {
           q"""
              io.github.methrat0n.restruct.schema.OptionalField[$internalTyp](
                io.github.methrat0n.restruct.core.data.schema.Path(
-                 io.github.methrat0n.restruct.core.data.schema.StepList(
-                   io.github.methrat0n.restruct.core.data.schema.StringStep($fieldName), List.empty
+                 io.github.methrat0n.restruct.schema.StepList(
+                   io.github.methrat0n.restruct.schema.StringStep($fieldName), List.empty
                  )
                ), $treeSchema, None
              )
@@ -315,8 +318,8 @@ object Impl {
           q"""
               io.github.methrat0n.restruct.schema.RequiredField[$typ](
                 io.github.methrat0n.restruct.core.data.schema.Path(
-                  io.github.methrat0n.restruct.core.data.schema.StepList(
-                    io.github.methrat0n.restruct.core.data.schema.StringStep($fieldName), List.empty
+                  io.github.methrat0n.restruct.schema.StepList(
+                    io.github.methrat0n.restruct.schema.StringStep($fieldName), List.empty
                   )
                 ), $treeSchema, None
               )
@@ -368,8 +371,8 @@ object Impl {
           q"""
              io.github.methrat0n.restruct.schema.OptionalField[$internalTyp](
                io.github.methrat0n.restruct.core.data.schema.Path(
-                 io.github.methrat0n.restruct.core.data.schema.StepList(
-                   io.github.methrat0n.restruct.core.data.schema.StringStep($fieldName), List.empty
+                 io.github.methrat0n.restruct.schema.StepList(
+                   io.github.methrat0n.restruct.schema.StringStep($fieldName), List.empty
                  )
                ), $treeSchema, None
              )
@@ -380,8 +383,8 @@ object Impl {
           q"""
               io.github.methrat0n.restruct.schema.RequiredField[$typ](
                 io.github.methrat0n.restruct.core.data.schema.Path(
-                  io.github.methrat0n.restruct.core.data.schema.StepList(
-                    io.github.methrat0n.restruct.core.data.schema.StringStep($fieldName), List.empty
+                  io.github.methrat0n.restruct.schema.StepList(
+                    io.github.methrat0n.restruct.schema.StringStep($fieldName), List.empty
                   )
                 ), $treeSchema, None
               )

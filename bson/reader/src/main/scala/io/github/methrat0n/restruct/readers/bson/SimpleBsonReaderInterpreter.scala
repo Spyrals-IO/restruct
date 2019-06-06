@@ -2,9 +2,7 @@ package io.github.methrat0n.restruct.readers.bson
 
 import java.time.format.DateTimeFormatter
 import java.time._
-
 import reactivemongo.bson.{ BSONBoolean, BSONDateTime, BSONDecimal, BSONDouble, BSONInteger, BSONLong, BSONString }
-import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
 
 import scala.util.Try
 

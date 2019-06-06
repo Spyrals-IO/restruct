@@ -1,7 +1,8 @@
 package io.github.methrat0n.restruct.writers.jsonschema
 
-import io.github.methrat0n.restruct.core.data.constraints.Constraint
+import io.github.methrat0n.restruct.constraints.Constraint
 import io.github.methrat0n.restruct.core.data.schema._
+import io.github.methrat0n.restruct.schema.{ IntStep, StringStep }
 import io.github.methrat0n.restruct.writers.json.jsonWrites
 import play.api.libs.json._
 

@@ -1,7 +1,6 @@
 package io.github.methrat0n.restruct.handlers.json
 
 import io.github.methrat0n.restruct.core.data.schema.ComplexSchemaAlgebra
-import io.github.methrat0n.restruct.readers.json.jsonReads
 import io.github.methrat0n.restruct.writers.json.jsonWrites
 import play.api.libs.json.Format
 

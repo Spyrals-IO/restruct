@@ -10,6 +10,7 @@ lazy val core = (project in file("./core"))
   .settings(addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"))
   .settings(libraryDependencies += scalaReflect.value)
   .settings(libraryDependencies ++= coreDependencies)
+  .settings(scalacOptions += "-language:higherKinds")
   .settings(name := "restruct-core")
 
 lazy val jsonSchema = (project in file("./jsonSchema"))
@@ -27,6 +28,7 @@ lazy val reads = (project in file("./playJson/reads"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= playJsonDependencies)
   .settings(name := "restruct-play-json-reads")
+  .settings(libraryDependencies += Dependencies.chuusai.shapeless)
   .dependsOn(core)
 
 lazy val writes = (project in file("./playJson/writes"))
@@ -87,7 +89,7 @@ lazy val examples = (project in file("./examples"))
   .settings(commonSettings: _*)
   .settings(name := "restruct-examples")
   //.settings(libraryDependencies += Dependencies.restruct.reads)
-  .dependsOn(reads, bsonReader)
+  .dependsOn(reads)
 
 lazy val commonSettings =
   Settings.scala.commonSettings ++

@@ -1,6 +1,5 @@
 package io.github.methrat0n.restruct.readers.bson
 
-import io.github.methrat0n.restruct.schema.Syntax._
 import org.scalatest.{ FlatSpec, Matchers }
 import reactivemongo.bson.BSONArray
 

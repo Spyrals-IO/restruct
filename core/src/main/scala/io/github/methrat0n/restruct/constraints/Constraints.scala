@@ -1,4 +1,4 @@
-package io.github.methrat0n.restruct.core.data.constraints
+package io.github.methrat0n.restruct.constraints
 
 object Constraints {
   final case class EqualConstraint[T](value: T) extends Constraint[T] {

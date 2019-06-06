@@ -31,4 +31,9 @@ object Dependencies {
     val version = "0.1.0"
     val reads = "io.github.methrat0n" %% "restruct-play-json-reads" % version
   }
+
+  //TODO remove
+  object chuusai {
+    val shapeless = "com.chuusai" %% "shapeless" % "2.3.3"
+  }
 }

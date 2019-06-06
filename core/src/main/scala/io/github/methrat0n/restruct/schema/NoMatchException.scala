@@ -1,4 +1,4 @@
-package io.github.methrat0n.restruct.core.data.schema
+package io.github.methrat0n.restruct.schema
 
 class NoMatchException(msg: String, matchErrors: Throwable*) extends RuntimeException(msg) {
   val errors: List[Throwable] = matchErrors.toList

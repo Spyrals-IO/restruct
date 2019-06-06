@@ -3,8 +3,6 @@ package io.github.methrat0n.restruct.handlers.json
 import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 
 import play.api.libs.json.Format
-import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
-import io.github.methrat0n.restruct.readers.json.SimpleJsonReaderInterpreter
 import io.github.methrat0n.restruct.writers.json.SimpleJsonWriterInterpreter
 
 trait SimpleJsonFormaterInterpreter extends SimpleSchemaAlgebra[Format] {

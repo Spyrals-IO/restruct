@@ -1,6 +1,6 @@
 package io.github.methrat0n.restruct.handlers.bson
 
-import io.github.methrat0n.restruct.core.data.constraints.Constraint
+import io.github.methrat0n.restruct.constraints.Constraint
 import io.github.methrat0n.restruct.core.data.schema.{ FieldAlgebra, Path }
 import io.github.methrat0n.restruct.readers.bson.bsonReader
 import io.github.methrat0n.restruct.writers.bson.bsonWriter

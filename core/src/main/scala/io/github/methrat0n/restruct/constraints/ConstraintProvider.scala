@@ -1,4 +1,4 @@
-package io.github.methrat0n.restruct.core.data.constraints
+package io.github.methrat0n.restruct.constraints
 
 trait ConstraintProvider[T] {
   def apply(): List[Constraint[T]]

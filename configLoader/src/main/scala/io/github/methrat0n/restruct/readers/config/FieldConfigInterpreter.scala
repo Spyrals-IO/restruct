@@ -1,9 +1,10 @@
 package io.github.methrat0n.restruct.readers.config
 
 import com.typesafe.config.{ Config, ConfigException, ConfigList, ConfigObject }
+import io.github.methrat0n.restruct.constraints.Constraint
 import play.api.{ ConfigLoader, Configuration }
-import io.github.methrat0n.restruct.core.data.constraints.Constraint
 import io.github.methrat0n.restruct.core.data.schema._
+import io.github.methrat0n.restruct.schema.{ IntStep, StringStep }
 
 import scala.util.{ Failure, Success, Try }
 

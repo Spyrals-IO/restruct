@@ -3,7 +3,6 @@ package io.github.methrat0n.restruct.handlers.bson
 import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 
 import reactivemongo.bson.DefaultBSONHandlers
-import io.github.methrat0n.restruct.core.data.schema.SimpleSchemaAlgebra
 import io.github.methrat0n.restruct.readers.bson.SimpleBsonReaderInterpreter
 import io.github.methrat0n.restruct.writers.bson.SimpleBsonWriterInterpreter
 
