@@ -1,8 +1,9 @@
 package io.github.methrat0n.restruct.writers
 
-import java.time.{LocalDate, LocalTime, ZonedDateTime}
+import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 
 import io.github.methrat0n.restruct.constraints.Constraint
+import io.github.methrat0n.restruct.schema.Interpreter._
 import io.github.methrat0n.restruct.schema.Path.\
 import io.github.methrat0n.restruct.schema._
 import play.api.libs.json._
@@ -24,7 +25,7 @@ object json {
     override def schema: Writes[Char] = Writes[Char](char => JsString(char.toString))
   }
   implicit val byteInterpreter: SimpleInterpreter[Writes, Byte] = new SimpleInterpreter[Writes, Byte] {
-    override def schema: Writes[Byte] =  Writes.ByteWrites
+    override def schema: Writes[Byte] = Writes.ByteWrites
   }
   implicit val shortInterpreter: SimpleInterpreter[Writes, Short] = new SimpleInterpreter[Writes, Short] {
     override def schema: Writes[Short] = Writes.ShortWrites
@@ -52,43 +53,47 @@ object json {
   }
 
   import language.higherKinds
-  implicit def manyInterpreter[Collection[A] <: Traversable[A], T](implicit originalInterpreter: Interpreter[Writes, T]): ManyInterpreter[Writes, T, Collection] = new ManyInterpreter[Writes, T, Collection] {
-    override def originalInterpreter: Interpreter[Writes, T] = originalInterpreter
+  implicit def manyInterpreter[Collection[A] <: Iterable[A], Type, UnderlyingInterpreter <: Interpreter[Writes, Type]](implicit original: UnderlyingInterpreter): ManyInterpreter[Writes, Type, Collection, UnderlyingInterpreter] = new ManyInterpreter[Writes, Type, Collection, UnderlyingInterpreter] {
+    override def originalInterpreter: UnderlyingInterpreter = original
 
-    override def many(schema: Writes[T]): Writes[Collection[T]] = Writes.traversableWrites(schema)
+    override def many(schema: Writes[Type]): Writes[Collection[Type]] = Writes.traversableWrites(schema)
   }
 
-  implicit def requiredInterpreter[T, P <: Path](implicit pathBuilder: PathBuilder[P]): RequiredInterpreter[Writes, P, T] = (path: P, schema: Writes[T], default: Option[T]) =>
-    pathBuilder.toJsPath(path).write(schema)
+  implicit def requiredInterpreter[Type, P <: Path, UnderlyingInterpreter <: Interpreter[Writes, Type]](implicit pathBuilder: PathBuilder[P], interpreter: UnderlyingInterpreter): RequiredInterpreter[Writes, P, Type, UnderlyingInterpreter] = new RequiredInterpreter[Writes, P, Type, UnderlyingInterpreter] {
+    override def originalInterpreter: UnderlyingInterpreter = interpreter
 
-  implicit def optionalInterpreter[T, P <: Path](implicit originalInterpreter: Interpreter[Writes, T], pathBuilder: PathBuilder[P]): OptionalInterpreter[Writes, P, T] = new OptionalInterpreter[Writes, P, T] {
-    override def originalInterpreter: Interpreter[Writes, T] = originalInterpreter
+    override def required(path: P, schema: Writes[Type], default: Option[Type]): Writes[Type] =
+      pathBuilder.toJsPath(path).write(schema)
+  }
 
-    override def optional(path: P, schema: Writes[T], default: Option[Option[T]]): Writes[Option[T]] =
+  implicit def optionalInterpreter[Type, P <: Path, UnderlyingInterpreter <: Interpreter[Writes, Type]](implicit original: UnderlyingInterpreter, pathBuilder: PathBuilder[P]): OptionalInterpreter[Writes, P, Type, UnderlyingInterpreter] = new OptionalInterpreter[Writes, P, Type, UnderlyingInterpreter] {
+    override def originalInterpreter: UnderlyingInterpreter = original
+
+    override def optional(path: P, schema: Writes[Type], default: Option[Option[Type]]): Writes[Option[Type]] =
       pathBuilder.toJsPath(path).writeNullable(schema)
   }
 
-  implicit def constrainedInterpreter[T](implicit interpreter: Interpreter[Writes, T]): ConstrainedInterpreter[Writes, T] = new ConstrainedInterpreter[Writes, T] {
-    override def originalInterpreter: Interpreter[Writes, T] = interpreter
+  implicit def constrainedInterpreter[Type, UnderlyingInterpreter <: Interpreter[Writes, Type]](implicit interpreter: UnderlyingInterpreter): ConstrainedInterpreter[Writes, Type, UnderlyingInterpreter] = new ConstrainedInterpreter[Writes, Type, UnderlyingInterpreter] {
+    override def originalInterpreter: UnderlyingInterpreter = interpreter
 
-    override def verifying(schema: Writes[T], constraint: Constraint[T]): Writes[T] =
+    override def verifying(schema: Writes[Type], constraint: Constraint[Type]): Writes[Type] =
       schema
   }
 
-  import play.api.libs.functional.syntax._
-  implicit def invariantInterpreter[A, B](implicit interpreterA: Interpreter[Writes, A], interpreterB: Interpreter[Writes, B]): InvariantInterpreter[Writes, A, B] = new InvariantInterpreter[Writes, A, B] {
-    override def originalInterpreterA: Interpreter[Writes, A] = interpreterA
-
-    override def originalInterpreterB: Interpreter[Writes, B] = interpreterB
+  implicit def invariantInterpreter[A, B, AInterpreter <: Interpreter[Writes, A]](implicit interpreterA: AInterpreter): InvariantInterpreter[Writes, A, B, AInterpreter] = new InvariantInterpreter[Writes, A, B, AInterpreter] {
+    override def underlyingInterpreter: AInterpreter = interpreterA
 
     override def imap(fa: Writes[A])(f: A => B)(g: B => A): Writes[B] =
       fa.contramap(g)
   }
 
-  implicit def semiGroupalInterpreter[A, B](implicit interpreterA: Interpreter[Writes, A], interpreterB: Interpreter[Writes, B]): SemiGroupalInterpreter[Writes, A, B] = new SemiGroupalInterpreter[Writes, A, B] {
-    override def originalInterpreterA: Interpreter[Writes, A] = interpreterA
+  implicit def semiGroupalInterpreter[A, B, AInterpreter <: Interpreter[Writes, A], BInterpreter <: Interpreter[Writes, B]](implicit
+    interpreterA: AInterpreter,
+    interpreterB: BInterpreter
+  ): SemiGroupalInterpreter[Writes, A, B, AInterpreter, BInterpreter] = new SemiGroupalInterpreter[Writes, A, B, AInterpreter, BInterpreter] {
+    override def originalInterpreterA: AInterpreter = interpreterA
 
-    override def originalInterpreterB: Interpreter[Writes, B] = interpreterB
+    override def originalInterpreterB: BInterpreter = interpreterB
 
     override def product(fa: Writes[A], fb: Writes[B]): Writes[(A, B)] =
       (o: (A, B)) => (fa.writes(o._1), fb.writes(o._2)) match {
@@ -98,22 +103,25 @@ object json {
       }
   }
 
-  implicit def oneOfInterpreter[A, B](implicit interpreterA: Interpreter[Writes, A], interpreterB: Interpreter[Writes, B]): OneOfInterpreter[Writes, A, B] = new OneOfInterpreter[Writes, A, B] {
-    override def originalInterpreterA: Interpreter[Writes, A] = interpreterA
+  implicit def oneOfInterpreter[A, B, AInterpreter <: Interpreter[Writes, A], BInterpreter <: Interpreter[Writes, B]](implicit
+    interpreterA: AInterpreter,
+    interpreterB: BInterpreter
+  ): OneOfInterpreter[Writes, A, B, AInterpreter, BInterpreter] = new OneOfInterpreter[Writes, A, B, AInterpreter, BInterpreter] {
+    override def originalInterpreterA: AInterpreter = interpreterA
 
-    override def originalInterpreterB: Interpreter[Writes, B] = interpreterB
+    override def originalInterpreterB: BInterpreter = interpreterB
 
     /**
-      * Should return a success, if any, or concatenate errors.
-      *
-      * fa == sucess => fa result in Left
-      * fa == error && fb == sucess => fb result in Right
-      * fa == error && fb == error => concatenate fa and fb errors into F error handling
-      *
-      * If two successes are found, fa will be choosen.
-      *
-      * @return F in error (depends on the implementing F) or successful F with one of the two value
-      */
+     * Should return a success, if any, or concatenate errors.
+     *
+     * fa == sucess => fa result in Left
+     * fa == error && fb == sucess => fb result in Right
+     * fa == error && fb == error => concatenate fa and fb errors into F error handling
+     *
+     * If two successes are found, fa will be choosen.
+     *
+     * @return F in error (depends on the implementing F) or successful F with one of the two value
+     */
     override def or(fa: Writes[A], fb: Writes[B]): Writes[Either[A, B]] =
       Writes {
         case Left(input)  => fa.writes(input)

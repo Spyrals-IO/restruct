@@ -1,44 +1,49 @@
 package io.github.methrat0n.restruct.schema
 
 import io.github.methrat0n.restruct.constraints.Constraint
+import io.github.methrat0n.restruct.schema.Interpreter.SimpleInterpreter
 import io.github.methrat0n.restruct.schema.Schemas._
 
-import scala.collection.GenIterable
-import scala.reflect.macros.blackbox
-import scala.language.experimental.macros
+//import scala.language.experimental.macros
+//import scala.reflect.macros.blackbox
 
-private[schema] trait Schema[A] { self =>
+trait Schema[Type, InternalInterpreter[Format[_]] <: Interpreter[Format, Type]] { self =>
 
-  type OwnInterpreter[Format[_]] <: Interpreter[Format, A]
+  def bind[Format[_]](implicit interpreter: InternalInterpreter[Format]): Format[Type]
 
-  def bind[Format[_]](implicit algebra: OwnInterpreter[Format]): Format[A]
+  def constraintedBy(constraint: Constraint[Type]): ConstrainedSchema[Type, InternalInterpreter, self.type] =
+    ConstrainedSchema[Type, InternalInterpreter, self.type](self, constraint)
 
-  private[schema] def secretBind[Format[_]](implicit algebra: Interpreter[Format, A]): Format[A] =
-    bind[Format](algebra.asInstanceOf[self.OwnInterpreter[Format]])
+  def and[B, BInterpreter[Format[_]] <: Interpreter[Format, B]](schema: Schema[B, BInterpreter]): And[Type, B, InternalInterpreter, BInterpreter] =
+    And[Type, B, InternalInterpreter, BInterpreter](self, schema)
 
-  def constraintedBy(constraint: Constraint[A]): ConstrainedSchema[A] = ConstrainedSchema(self, constraint)
+  def or[B, BInterpreter[Format[_]] <: Interpreter[Format, B], BSchema <: Schema[B, BInterpreter]](schema: BSchema): Or[Type, B, InternalInterpreter, self.type, BInterpreter, BSchema] =
+    Or[Type, B, InternalInterpreter, self.type, BInterpreter, BSchema](self, schema)
 
-  def and[B](schema: Schema[B]): And[A, B] = And(self, schema)
-
-  def or[B](schema: Schema[B]): Or[A, B] = Or(self, schema)
-
-  def inmap[B](f: A => B)(g: B => A): InvariantSchema[A, B] = InvariantSchema(self, f, g)
+  def inmap[B](f: Type => B)(g: B => Type): InvariantSchema[Type, B, InternalInterpreter] =
+    InvariantSchema[Type, B, InternalInterpreter](self, f, g)
 }
 
 object Schema extends LowPriorityImplicits {
 
-  def apply[Typ, Composition](schema: Schema[Composition]): Schema[Typ] = macro Impl.simple[Typ, Composition]
+  //def apply[Typ, Composition](schema: Schema[Composition]): InvariantSchema[Typ] = ??? //macro Impl.simple[Typ, Composition]
 
-  def of[Type]: Schema[Type] = macro Impl.simpleOf[Type]
+  //def of[Type]: Schema[Type] = macro Impl.simpleOf[Type]
 }
 
-private[schema] trait LowPriorityImplicits {
+private[schema] trait LowPriorityImplicits extends LastPriorityImplicits {
 
-  implicit def simple[Type]: SimpleSchema[Type] = new SimpleSchema[Type]
+  type SimpleStringInterpreter[Format[_]] = SimpleInterpreter[Format, String]
 
-  implicit def many[Type, Collection[A] <: GenIterable[A]](implicit schema: Schema[Type]): ManySchema[Collection, Type] = new ManySchema(schema)
+  implicit def simple[Type <: AnyVal]: SimpleSchema[Type] = new SimpleSchema[Type]
+  implicit val simpleString: SimpleSchema[String] = new SimpleSchema[String]
 }
 
+private[schema] trait LastPriorityImplicits {
+  implicit def many[Type, Collection[A] <: Iterable[A], TypeInterpreter[Format[_]] <: Interpreter[Format, Type], Scheme <: Schema[Type, TypeInterpreter]](implicit schema: Scheme): ManySchema[Collection, Type, TypeInterpreter, Scheme] =
+    new ManySchema[Collection, Type, TypeInterpreter, Scheme](schema)
+}
+/*
 object StrictSchema {
   def apply[Typ, Composition](schema: Schema[Composition]): Schema[Typ] = macro Impl.strict[Typ, Composition]
   def of[Type]: Schema[Type] = macro Impl.strictOf[Type]
@@ -407,4 +412,4 @@ object Impl {
       )
     }
   }
-}
+}*/

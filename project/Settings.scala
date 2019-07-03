@@ -3,7 +3,7 @@ import Keys._
 
 object Settings {
   object scala {
-    val version = "2.12.4"
+    val version = "2.13.0"
     val commonSettings = Seq(
       scalaVersion := version,
       organization := "io.github.methrat0n",
@@ -13,13 +13,11 @@ object Settings {
         "-deprecation",
         "-unchecked",
         "-feature",
-        "-Ywarn-value-discard",
         //"-Ywarn-unused",
-        "-Ypartial-unification",
-        "-Ywarn-infer-any",
         "-Xcheckinit",
         "-Xfatal-warnings",
-        "-Xlint"
+        "-Xlint",
+        "-Xlog-implicits"
       )
     )
   }

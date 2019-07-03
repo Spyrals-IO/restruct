@@ -3,14 +3,14 @@ package io.github.methrat0n.restruct.readers
 import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 
 import io.github.methrat0n.restruct.constraints.Constraint
+import io.github.methrat0n.restruct.schema.Interpreter._
 import io.github.methrat0n.restruct.schema.Path.\
 import io.github.methrat0n.restruct.schema._
 import play.api.libs.json._
 
-import scala.collection.GenIterable
-import scala.collection.generic.CanBuildFrom
+import scala.collection.Factory
 
-object json {
+object json extends MiddlePriority {
   implicit val charAlgebra: SimpleInterpreter[Reads, Char] = new SimpleInterpreter[Reads, Char] {
     override def schema: Reads[Char] = {
       case JsString(string) if string.length == 1 => JsSuccess(string.charAt(0))
@@ -56,7 +56,7 @@ object json {
           case _: NumberFormatException => JsError(JsonValidationError("error.expected.numberformatexception"))
         }
       case JsNumber(d) =>
-        d.toBigIntExact() match {
+        d.toBigIntExact match {
           case Some(bigInt) => JsSuccess(bigInt)
           case None         => JsError(JsonValidationError("error.expected.numberformatexception"))
         }
@@ -83,56 +83,37 @@ object json {
   implicit val dateAlgebra: SimpleInterpreter[Reads, LocalDate] = new SimpleInterpreter[Reads, LocalDate] {
     override def schema: Reads[LocalDate] = Reads.DefaultLocalDateReads
   }
+}
 
+trait MiddlePriority extends LowPriority {
   import language.higherKinds
-  implicit def manyAlgebra[T, Collection[A] <: GenIterable[A]](implicit algebra: Interpreter[Reads, T], canBuildFrom: CanBuildFrom[Collection[_], T, Collection[T]]): ManyInterpreter[Reads, T, Collection] = new ManyInterpreter[Reads, T, Collection] {
-    override def originalInterpreter: Interpreter[Reads, T] = algebra
+  implicit def manyInterpreter[T, Collection[A] <: Iterable[A], UnderlyingInterpreter <: Interpreter[Reads, T]](implicit algebra: UnderlyingInterpreter, factory: Factory[T, Collection[T]]): ManyInterpreter[Reads, T, Collection, UnderlyingInterpreter] = new ManyInterpreter[Reads, T, Collection, UnderlyingInterpreter] {
+    override def originalInterpreter: UnderlyingInterpreter = algebra
 
     override def many(schema: Reads[T]): Reads[Collection[T]] =
-      Reads.traversableReads[Collection, T](canBuildFrom, schema)
+      Reads.traversableReads[Collection, T](factory, schema)
   }
 
-  implicit def requiredAlgebra[T, P <: Path](implicit pathBuilder: PathBuilder[P]): RequiredInterpreter[Reads, P, T] = (path: P, schema: Reads[T], default: Option[T]) =>
-    default
-      .map(default => pathBuilder.toJsPath(path).readWithDefault(default)(schema))
-      .getOrElse(pathBuilder.toJsPath(path).read(schema))
-
-  implicit def optionalAlgebra[T, P <: Path](implicit algebra: Interpreter[Reads, T], pathBuilder: PathBuilder[P]): OptionalInterpreter[Reads, P, T] = new OptionalInterpreter[Reads, P, T] {
-    override def originalInterpreter: Interpreter[Reads, T] = algebra
+  implicit def optionalInterpreter[T, P <: Path, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit algebra: UnderlyingInterpreter, pathBuilder: PathBuilder[P]): OptionalInterpreter[Reads, P, T, UnderlyingInterpreter] = new OptionalInterpreter[Reads, P, T, UnderlyingInterpreter] {
+    override def originalInterpreter: UnderlyingInterpreter = algebra
 
     override def optional(path: P, schema: Reads[T], default: Option[Option[T]]): Reads[Option[T]] =
       pathBuilder.toJsPath(path).readNullableWithDefault(default.flatten)(schema)
   }
 
-  implicit def constrainedAlgebra[T](implicit algebra: Interpreter[Reads, T]): ConstrainedInterpreter[Reads, T] = new ConstrainedInterpreter[Reads, T] {
-    override def originalInterpreter: Interpreter[Reads, T] = algebra
-
-    override def verifying(schema: Reads[T], constraint: Constraint[T]): Reads[T] =
-      schema.filter(JsonValidationError(s"error.constraints.${constraint.name}", constraint.args: _*))(constraint.validate)
-  }
-
-  implicit def invariantAlgebra[A, B](implicit algebraA: Interpreter[Reads, A], algebraB: Interpreter[Reads, B]): InvariantInterpreter[Reads, A, B] = new InvariantInterpreter[Reads, A, B] {
-    override def originalInterpreterA: Interpreter[Reads, A] = algebraA
-
-    override def originalInterpreterB: Interpreter[Reads, B] = algebraB
-
-    override def imap(fa: Reads[A])(f: A => B)(g: B => A): Reads[B] =
-      fa.map(f)
-  }
-
   import play.api.libs.functional.syntax._
-  implicit def semiGroupalAlgebra[A, B](implicit algebraA: Interpreter[Reads, A], algebraB: Interpreter[Reads, B]): SemiGroupalInterpreter[Reads, A, B] = new SemiGroupalInterpreter[Reads, A, B] {
-    override def originalInterpreterA: Interpreter[Reads, A] = algebraA
+  implicit def semiGroupalInterpreter[A, B, AInterpreter <: Interpreter[Reads, A], BInterpreter <: Interpreter[Reads, B]](implicit algebraA: AInterpreter, algebraB: BInterpreter): SemiGroupalInterpreter[Reads, A, B, AInterpreter, BInterpreter] = new SemiGroupalInterpreter[Reads, A, B, AInterpreter, BInterpreter] {
+    override def originalInterpreterA: AInterpreter = algebraA
 
-    override def originalInterpreterB: Interpreter[Reads, B] = algebraB
+    override def originalInterpreterB: BInterpreter = algebraB
 
     override def product(fa: Reads[A], fb: Reads[B]): Reads[(A, B)] = (fa and fb).tupled
   }
 
-  implicit def oneOfAlgebra[A, B](implicit algebraA: Interpreter[Reads, A], algebraB: Interpreter[Reads, B]): OneOfInterpreter[Reads, A, B] = new OneOfInterpreter[Reads, A, B] {
-    override def originalInterpreterA: Interpreter[Reads, A] = algebraA
+  implicit def oneOfInterpreter[A, B, AInterpreter <: Interpreter[Reads, A], BInterpreter <: Interpreter[Reads, B]](implicit algebraA: AInterpreter, algebraB: BInterpreter): OneOfInterpreter[Reads, A, B, AInterpreter, BInterpreter] = new OneOfInterpreter[Reads, A, B, AInterpreter, BInterpreter] {
+    override def originalInterpreterA: AInterpreter = algebraA
 
-    override def originalInterpreterB: Interpreter[Reads, B] = algebraB
+    override def originalInterpreterB: BInterpreter = algebraB
 
     /**
      * Should return a success, if any, or concatenate errors.
@@ -154,20 +135,43 @@ object json {
         }
       })
   }
+}
 
-  trait PathBuilder[P <: Path] {
-    def toJsPath(path: P): JsPath
+trait LowPriority extends FinalPriority {
+
+  implicit def invariantInterpreter[A, B, UnderlyingInterpreter <: Interpreter[Reads, A]](implicit underlying: UnderlyingInterpreter): InvariantInterpreter[Reads, A, B, UnderlyingInterpreter] = new InvariantInterpreter[Reads, A, B, UnderlyingInterpreter] {
+    override def underlyingInterpreter: UnderlyingInterpreter = underlying
+
+    override def imap(fa: Reads[A])(f: A => B)(g: B => A): Reads[B] =
+      fa.map(f)
   }
 
-  object PathBuilder {
-    implicit def stringStep2JsPath[RemainingPath <: Path](implicit remainingPath: PathBuilder[RemainingPath]) = new PathBuilder[RemainingPath \ String] {
-      override def toJsPath(path: RemainingPath \ String): JsPath = JsPath(remainingPath.toJsPath(path.previousSteps).path :+ KeyPathNode(path.step))
-    }
-
-    implicit def intStep2JsPath[RemainingPath <: Path](implicit remainingPath: PathBuilder[RemainingPath]) = new PathBuilder[RemainingPath \ Int] {
-      override def toJsPath(path: RemainingPath \ Int): JsPath = JsPath(remainingPath.toJsPath(path.previousSteps).path :+ IdxPathNode(path.step))
-    }
-
-    implicit def emptyStep2JsPath: PathBuilder[PathNil] = (_: PathNil) => JsPath(List.empty)
+  implicit def requiredInterpreter[P <: Path, T, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit pathBuilder: PathBuilder[P], interpreter: UnderlyingInterpreter): RequiredInterpreter[Reads, P, T, UnderlyingInterpreter] = new RequiredInterpreter[Reads, P, T, UnderlyingInterpreter] {
+    override def originalInterpreter: UnderlyingInterpreter = interpreter
+    override def required(path: P, schema: Reads[T], default: Option[T]): Reads[T] = default
+      .map(default => pathBuilder.toJsPath(path).readWithDefault(default)(schema))
+      .getOrElse(pathBuilder.toJsPath(path).read(schema))
   }
+}
+
+trait FinalPriority {
+  implicit def constrainedInterpreter[T, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit algebra: UnderlyingInterpreter): ConstrainedInterpreter[Reads, T, UnderlyingInterpreter] = new ConstrainedInterpreter[Reads, T, UnderlyingInterpreter] {
+    override def originalInterpreter: UnderlyingInterpreter = algebra
+
+    override def verifying(schema: Reads[T], constraint: Constraint[T]): Reads[T] =
+      schema.filter(JsonValidationError(s"error.constraints.${constraint.name}", constraint.args: _*))(constraint.validate)
+  }
+}
+
+trait PathBuilder[P <: Path] {
+  def toJsPath(path: P): JsPath
+}
+
+object PathBuilder {
+  implicit def stringStep2JsPath[RemainingPath <: Path](implicit remainingPath: PathBuilder[RemainingPath]): PathBuilder[RemainingPath \ String] =
+    (path: RemainingPath \ String) => JsPath(remainingPath.toJsPath(path.previousSteps).path :+ KeyPathNode(path.step))
+  implicit def intStep2JsPath[RemainingPath <: Path](implicit remainingPath: PathBuilder[RemainingPath]): PathBuilder[RemainingPath \ Int] =
+    (path: RemainingPath \ Int) => JsPath(remainingPath.toJsPath(path.previousSteps).path :+ IdxPathNode(path.step))
+  implicit def emptyStep2JsPath: PathBuilder[PathNil] =
+    (_: PathNil) => JsPath(List.empty)
 }

@@ -4,16 +4,16 @@ object Dependencies {
 
   object enumeratum {
     val version = "1.5.13" //TODO minimify and retro
-    val enum = "com.beachape" % "enumeratum_2.12" % version
+    val enum = "com.beachape" %% "enumeratum" % version
   }
 
   object test {
-    val version = "3.0.5"
-    val scalaTest = "org.scalatest" % "scalatest_2.12" % version
+    val version = "3.0.8"
+    val scalaTest = "org.scalatest" %% "scalatest" % version
   }
 
   object json {
-    val version = "2.6.7" //TODO minimify and retro
+    val version = "2.7.4" //TODO minimify and retro
     val play = "com.typesafe.play" %% "play-json" % version
   }
 
@@ -23,7 +23,7 @@ object Dependencies {
   }
 
   object play {
-    val version = "2.6.0"
+    val version = "2.7.3"
     val play = "com.typesafe.play" %% "play" % version
   }
 
