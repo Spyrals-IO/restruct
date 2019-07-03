@@ -1,48 +1,36 @@
 package io.github.methrat0n.restruct.schema
 
 import io.github.methrat0n.restruct.constraints.Constraint
-
-import scala.collection.GenIterable
+import io.github.methrat0n.restruct.schema.Interpreter._
 
 object Schemas {
-  final case class And[A, B](schemaA: Schema[A], schemaB: Schema[B]) extends Schema[(A, B)] {
-    override type OwnInterpreter[Format[_]] = SemiGroupalInterpreter[Format, A, B]
-
-    override def bind[Format[_]](implicit algebra: OwnInterpreter[Format]): Format[(A, B)] =
-      algebra.product(schemaA.secretBind[Format](algebra.originalInterpreterA), schemaB.secretBind[Format](algebra.originalInterpreterB))
+  final case class And[A, B, AInterpreter[Format[_]] <: Interpreter[Format, A], BInterpreter[Format[_]] <: Interpreter[Format, B]](schemaA: Schema[A, AInterpreter], schemaB: Schema[B, BInterpreter]) extends Schema[(A, B), λ[Format[_] => SemiGroupalInterpreter[Format, A, B, AInterpreter[Format], BInterpreter[Format]]]] {
+    override def bind[Format[_]](implicit interpreter: SemiGroupalInterpreter[Format, A, B, AInterpreter[Format], BInterpreter[Format]]): Format[(A, B)] =
+      interpreter.product(schemaA.bind[Format](interpreter.originalInterpreterA), schemaB.bind[Format](interpreter.originalInterpreterB))
   }
 
-  final case class Or[A, B](schemaA: Schema[A], schemaB: Schema[B]) extends Schema[Either[A, B]] {
-    override type OwnInterpreter[Format[_]] = OneOfInterpreter[Format, A, B]
-
-    override def bind[Format[_]](implicit algebra: OwnInterpreter[Format]): Format[Either[A, B]] =
-      algebra.or(schemaA.secretBind[Format](algebra.originalInterpreterA), schemaB.secretBind[Format](algebra.originalInterpreterB))
+  final case class Or[A, B, AInterpreter[Format[_]] <: Interpreter[Format, A], SchemaA <: Schema[A, AInterpreter], BInterpreter[Format[_]] <: Interpreter[Format, B], SchemaB <: Schema[B, BInterpreter]](schemaA: SchemaA, schemaB: SchemaB) extends Schema[Either[A, B], λ[Format[_] => OneOfInterpreter[Format, A, B, AInterpreter[Format], BInterpreter[Format]]]] {
+    override def bind[Format[_]](implicit interpreter: OneOfInterpreter[Format, A, B, AInterpreter[Format], BInterpreter[Format]]): Format[Either[A, B]] =
+      interpreter.or(schemaA.bind[Format](interpreter.originalInterpreterA), schemaB.bind[Format](interpreter.originalInterpreterB))
   }
 
-  final class SimpleSchema[Type] extends Schema[Type] {
-    override type OwnInterpreter[Format[_]] = SimpleInterpreter[Format, Type]
-    override def bind[Format[_]](implicit algebra: SimpleInterpreter[Format, Type]): Format[Type] =
-      algebra.schema
+  final class SimpleSchema[Type] extends Schema[Type, SimpleInterpreter[?[_], Type]] {
+    override def bind[Format[_]](implicit interpreter: SimpleInterpreter[Format, Type]): Format[Type] =
+      interpreter.schema
   }
 
-  final class ManySchema[Collection[A] <: GenIterable[A], Type](schema: Schema[Type]) extends Schema[Collection[Type]] {
-    override type OwnInterpreter[Format[_]] = ManyInterpreter[Format, Type, Collection]
-
-    override def bind[Format[_]](implicit algebra: OwnInterpreter[Format]): Format[Collection[Type]] =
-      algebra.many(schema.secretBind[Format](algebra.originalInterpreter))
+  final class ManySchema[Collection[A] <: Iterable[A], Type, TypeInterpreter[Format[_]] <: Interpreter[Format, Type], Scheme <: Schema[Type, TypeInterpreter]](schema: Scheme) extends Schema[Collection[Type], λ[Format[_] => ManyInterpreter[Format, Type, Collection, TypeInterpreter[Format]]]] {
+    override def bind[Format[_]](implicit interpreter: ManyInterpreter[Format, Type, Collection, TypeInterpreter[Format]]): Format[Collection[Type]] =
+      interpreter.many(schema.bind[Format](interpreter.originalInterpreter))
   }
 
-  final case class ConstrainedSchema[Type](schema: Schema[Type], constraint: Constraint[Type]) extends Schema[Type] {
-    override type OwnInterpreter[Format[_]] = ConstrainedInterpreter[Format, Type]
-
-    override def bind[Format[_]](implicit algebra: OwnInterpreter[Format]): Format[Type] =
-      algebra.verifying(schema.secretBind[Format](algebra.originalInterpreter), constraint)
+  final case class ConstrainedSchema[Type, TypeInterpreter[Format[_]] <: Interpreter[Format, Type], Scheme <: Schema[Type, TypeInterpreter]](schema: Scheme, constraint: Constraint[Type]) extends Schema[Type, λ[Format[_] => ConstrainedInterpreter[Format, Type, TypeInterpreter[Format]]]] {
+    override def bind[Format[_]](implicit interpreter: ConstrainedInterpreter[Format, Type, TypeInterpreter[Format]]): Format[Type] =
+      interpreter.verifying(schema.bind[Format](interpreter.originalInterpreter), constraint)
   }
 
-  final case class InvariantSchema[A, B](schema: Schema[A], f: A => B, g: B => A) extends Schema[B] {
-    override type OwnInterpreter[Format[_]] = InvariantInterpreter[Format, A, B]
-
-    override def bind[Format[_]](implicit algebra: OwnInterpreter[Format]): Format[B] =
-      algebra.imap(schema.secretBind[Format](algebra.originalInterpreterA))(f)(g)
+  final case class InvariantSchema[A, B, AInterpreter[Format[_]] <: Interpreter[Format, A]](schema: Schema[A, AInterpreter], f: A => B, g: B => A) extends Schema[B, λ[Format[_] => InvariantInterpreter[Format, A, B, AInterpreter[Format]]]] {
+    override def bind[Format[_]](implicit interpreter: InvariantInterpreter[Format, A, B, AInterpreter[Format]]): Format[B] =
+      interpreter.imap(schema.bind[Format](interpreter.underlyingInterpreter))(f)(g)
   }
 }
