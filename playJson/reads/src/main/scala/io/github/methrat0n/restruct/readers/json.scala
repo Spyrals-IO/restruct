@@ -8,8 +8,6 @@ import io.github.methrat0n.restruct.schema.Path.\
 import io.github.methrat0n.restruct.schema._
 import play.api.libs.json._
 
-import scala.collection.Factory
-
 object json extends MiddlePriority {
   implicit val charAlgebra: SimpleInterpreter[Reads, Char] = new SimpleInterpreter[Reads, Char] {
     override def schema: Reads[Char] = {

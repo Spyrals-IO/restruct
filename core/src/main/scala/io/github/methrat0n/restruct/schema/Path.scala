@@ -33,15 +33,4 @@ object Path {
     def apply[PreviousSteps <: Path, Step](previousSteps: PreviousSteps, step: Step): PreviousSteps \ Step = PathCon(previousSteps, step)
     def apply[Step](step: Step): PathNil \ Step = PathCon(PathNil, step)
   }
-
-  /*implicit def forceInfer[
-    Type,
-    PreviousSteps <: Path,
-    Step,
-    TypeInterpreter[Format[_]] <: Interpreter[Format, Type],
-    Scheme <: Schema[Type, TypeInterpreter]
-  ](inferer: SchemeInferer[Type, PreviousSteps, Step]): RequiredField[PreviousSteps \ Step, Type, TypeInterpreter, Scheme] =
-    inferer*/
 }
-
-// String / Int / String / PathNil
