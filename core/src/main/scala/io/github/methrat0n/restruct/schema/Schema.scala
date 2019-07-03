@@ -31,15 +31,13 @@ object Schema extends LowPriorityImplicits {
   //def of[Type]: Schema[Type] = macro Impl.simpleOf[Type]
 }
 
-private[schema] trait LowPriorityImplicits extends LastPriorityImplicits {
+private[schema] trait LowPriorityImplicits {
 
   type SimpleStringInterpreter[Format[_]] = SimpleInterpreter[Format, String]
 
   implicit def simple[Type <: AnyVal]: SimpleSchema[Type] = new SimpleSchema[Type]
   implicit val simpleString: SimpleSchema[String] = new SimpleSchema[String]
-}
 
-private[schema] trait LastPriorityImplicits {
   implicit def many[Type, Collection[A] <: Iterable[A], TypeInterpreter[Format[_]] <: Interpreter[Format, Type]](implicit schema: Schema[Type, TypeInterpreter]): ManySchema[Collection, Type, TypeInterpreter] =
     new ManySchema[Collection, Type, TypeInterpreter](schema)
 }
