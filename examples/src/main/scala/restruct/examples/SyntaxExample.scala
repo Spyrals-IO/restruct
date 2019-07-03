@@ -76,7 +76,6 @@ import scala.language.postfixOps
 
 object GoodUser {
 
-  //: RequiredField[PathNil \ String, String, λ[Format[_] => RequiredInterpreter[Format, PathNil \ String, String, SimpleInterpreter[Format, String]]], SimpleSchema[String]]
   implicit val schema = (
     (Path \ "name").as[String]() and
     (Path \ "age").as[Int]()
@@ -86,29 +85,29 @@ object GoodUser {
 final case class BadUser(name: String, age: Int) extends User
 
 object BadUser {
-  /*implicit val schema =
-    ((Path \ "name").as(Schema.simpleString) and
-      (Path \ "age").as(Schema.simple[Int])).inmap(BadUser.apply _ tupled)(BadUser.unapply _ andThen (_.get))*/
+  implicit val schema =
+    ((Path \ "name").as[String]() and
+      (Path \ "age").as[Int]()).inmap(BadUser.apply _ tupled)(BadUser.unapply _ andThen (_.get))
 }
 
 final case class WrappedUser(user: GoodUser, text: String)
 
 object WrappedUser {
-  /*implicit val schema: InvariantSchema[WrappedUser] = (
-    (Path \ "user").as[GoodUser] and
-    (Path \ "text").as[String]
-  ).inmap[WrappedUser](WrappedUser.apply _ tupled)(WrappedUser.unapply _ andThen (_.get))*/
+  implicit val schema = (
+    (Path \ "user").as[GoodUser]() and
+    (Path \ "text").as[String]()
+  ).inmap[WrappedUser](WrappedUser.apply _ tupled)(WrappedUser.unapply _ andThen (_.get))
 }
 
 object User {
 
-  /*val schema: InvariantSchema[User] = (GoodUser.schema or BadUser.schema).inmap {
+  val schema = (GoodUser.schema or BadUser.schema).inmap {
     case Right(badUser) => badUser
     case Left(goodUser) => goodUser
   } {
     case badUser: BadUser   => Right(badUser)
     case goodUser: GoodUser => Left(goodUser)
-  }*/
+  }
 
   //val goodUserAutoSchema = Schema.of[GoodUser]
 

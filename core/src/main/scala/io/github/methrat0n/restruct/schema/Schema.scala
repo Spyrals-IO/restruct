@@ -11,14 +11,14 @@ trait Schema[Type, InternalInterpreter[Format[_]] <: Interpreter[Format, Type]] 
 
   def bind[Format[_]](implicit interpreter: InternalInterpreter[Format]): Format[Type]
 
-  def constraintedBy(constraint: Constraint[Type]): ConstrainedSchema[Type, InternalInterpreter, self.type] =
-    ConstrainedSchema[Type, InternalInterpreter, self.type](self, constraint)
+  def constraintedBy(constraint: Constraint[Type]): ConstrainedSchema[Type, InternalInterpreter] =
+    ConstrainedSchema[Type, InternalInterpreter](self, constraint)
 
   def and[B, BInterpreter[Format[_]] <: Interpreter[Format, B]](schema: Schema[B, BInterpreter]): And[Type, B, InternalInterpreter, BInterpreter] =
     And[Type, B, InternalInterpreter, BInterpreter](self, schema)
 
-  def or[B, BInterpreter[Format[_]] <: Interpreter[Format, B], BSchema <: Schema[B, BInterpreter]](schema: BSchema): Or[Type, B, InternalInterpreter, self.type, BInterpreter, BSchema] =
-    Or[Type, B, InternalInterpreter, self.type, BInterpreter, BSchema](self, schema)
+  def or[B, BInterpreter[Format[_]] <: Interpreter[Format, B]](schema: Schema[B, BInterpreter]): Or[Type, B, InternalInterpreter, BInterpreter] =
+    Or[Type, B, InternalInterpreter, BInterpreter](self, schema)
 
   def inmap[B](f: Type => B)(g: B => Type): InvariantSchema[Type, B, InternalInterpreter] =
     InvariantSchema[Type, B, InternalInterpreter](self, f, g)
@@ -40,8 +40,8 @@ private[schema] trait LowPriorityImplicits extends LastPriorityImplicits {
 }
 
 private[schema] trait LastPriorityImplicits {
-  implicit def many[Type, Collection[A] <: Iterable[A], TypeInterpreter[Format[_]] <: Interpreter[Format, Type], Scheme <: Schema[Type, TypeInterpreter]](implicit schema: Scheme): ManySchema[Collection, Type, TypeInterpreter, Scheme] =
-    new ManySchema[Collection, Type, TypeInterpreter, Scheme](schema)
+  implicit def many[Type, Collection[A] <: Iterable[A], TypeInterpreter[Format[_]] <: Interpreter[Format, Type]](implicit schema: Schema[Type, TypeInterpreter]): ManySchema[Collection, Type, TypeInterpreter] =
+    new ManySchema[Collection, Type, TypeInterpreter](schema)
 }
 /*
 object StrictSchema {
