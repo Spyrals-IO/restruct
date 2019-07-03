@@ -1,11 +1,7 @@
 package restruct.examples
 
-//import io.github.methrat0n.restruct.readers.bson.BsonReader
-//import io.github.methrat0n.restruct.schema.Interpreter.{InvariantInterpreter, OneOfInterpreter, SemiGroupalInterpreter, SimpleInterpreter}
 import io.github.methrat0n.restruct.schema.Path
 import play.api.libs.json.{ Json, Writes }
-//import play.api.libs.json.{Json, Reads}
-//import reactivemongo.bson.BSONDocument
 
 object SyntaxExample extends App {
 
