@@ -9,7 +9,7 @@ object Schemas {
       interpreter.product(schemaA.bind[Format](interpreter.originalInterpreterA), schemaB.bind[Format](interpreter.originalInterpreterB))
   }
 
-  final case class Or[A, B, AInterpreter[Format[_]] <: Interpreter[Format, A], SchemaA <: Schema[A, AInterpreter], BInterpreter[Format[_]] <: Interpreter[Format, B], SchemaB <: Schema[B, BInterpreter]](schemaA: SchemaA, schemaB: SchemaB) extends Schema[Either[A, B], λ[Format[_] => OneOfInterpreter[Format, A, B, AInterpreter[Format], BInterpreter[Format]]]] {
+  final case class Or[A, B, AInterpreter[Format[_]] <: Interpreter[Format, A], BInterpreter[Format[_]] <: Interpreter[Format, B]](schemaA: Schema[A, AInterpreter], schemaB: Schema[B, BInterpreter]) extends Schema[Either[A, B], λ[Format[_] => OneOfInterpreter[Format, A, B, AInterpreter[Format], BInterpreter[Format]]]] {
     override def bind[Format[_]](implicit interpreter: OneOfInterpreter[Format, A, B, AInterpreter[Format], BInterpreter[Format]]): Format[Either[A, B]] =
       interpreter.or(schemaA.bind[Format](interpreter.originalInterpreterA), schemaB.bind[Format](interpreter.originalInterpreterB))
   }
@@ -19,12 +19,12 @@ object Schemas {
       interpreter.schema
   }
 
-  final class ManySchema[Collection[A] <: Iterable[A], Type, TypeInterpreter[Format[_]] <: Interpreter[Format, Type], Scheme <: Schema[Type, TypeInterpreter]](schema: Scheme) extends Schema[Collection[Type], λ[Format[_] => ManyInterpreter[Format, Type, Collection, TypeInterpreter[Format]]]] {
+  final class ManySchema[Collection[A] <: Iterable[A], Type, TypeInterpreter[Format[_]] <: Interpreter[Format, Type]](schema: Schema[Type, TypeInterpreter]) extends Schema[Collection[Type], λ[Format[_] => ManyInterpreter[Format, Type, Collection, TypeInterpreter[Format]]]] {
     override def bind[Format[_]](implicit interpreter: ManyInterpreter[Format, Type, Collection, TypeInterpreter[Format]]): Format[Collection[Type]] =
       interpreter.many(schema.bind[Format](interpreter.originalInterpreter))
   }
 
-  final case class ConstrainedSchema[Type, TypeInterpreter[Format[_]] <: Interpreter[Format, Type], Scheme <: Schema[Type, TypeInterpreter]](schema: Scheme, constraint: Constraint[Type]) extends Schema[Type, λ[Format[_] => ConstrainedInterpreter[Format, Type, TypeInterpreter[Format]]]] {
+  final case class ConstrainedSchema[Type, TypeInterpreter[Format[_]] <: Interpreter[Format, Type]](schema: Schema[Type, TypeInterpreter], constraint: Constraint[Type]) extends Schema[Type, λ[Format[_] => ConstrainedInterpreter[Format, Type, TypeInterpreter[Format]]]] {
     override def bind[Format[_]](implicit interpreter: ConstrainedInterpreter[Format, Type, TypeInterpreter[Format]]): Format[Type] =
       interpreter.verifying(schema.bind[Format](interpreter.originalInterpreter), constraint)
   }
