@@ -8,43 +8,45 @@ import io.github.methrat0n.restruct.schema.Path.\
 import io.github.methrat0n.restruct.schema._
 import play.api.libs.json._
 
+import scala.collection.Factory
+
 object json extends MiddlePriority {
-  implicit val charAlgebra: SimpleInterpreter[Reads, Char] = new SimpleInterpreter[Reads, Char] {
+  implicit val charReadInterpreter: SimpleInterpreter[Reads, Char] = new SimpleInterpreter[Reads, Char] {
     override def schema: Reads[Char] = {
       case JsString(string) if string.length == 1 => JsSuccess(string.charAt(0))
       case _                                      => JsError()
     }
   }
 
-  implicit val byteAlgebra: SimpleInterpreter[Reads, Byte] = new SimpleInterpreter[Reads, Byte] {
+  implicit val byteReadInterpreter: SimpleInterpreter[Reads, Byte] = new SimpleInterpreter[Reads, Byte] {
     override def schema: Reads[Byte] = Reads.ByteReads
   }
 
-  implicit val shortAlgebra: SimpleInterpreter[Reads, Short] = new SimpleInterpreter[Reads, Short] {
+  implicit val shortReadInterpreter: SimpleInterpreter[Reads, Short] = new SimpleInterpreter[Reads, Short] {
     override def schema: Reads[Short] = Reads.ShortReads
   }
 
-  implicit val floatAlgebra: SimpleInterpreter[Reads, Float] = new SimpleInterpreter[Reads, Float] {
+  implicit val floatReadInterpreter: SimpleInterpreter[Reads, Float] = new SimpleInterpreter[Reads, Float] {
     override def schema: Reads[Float] = Reads.FloatReads
   }
 
-  implicit val decimalAlgebra: SimpleInterpreter[Reads, Double] = new SimpleInterpreter[Reads, Double] {
+  implicit val decimalReadInterpreter: SimpleInterpreter[Reads, Double] = new SimpleInterpreter[Reads, Double] {
     override def schema: Reads[Double] = Reads.DoubleReads
   }
 
-  implicit val bigDecimalAlgebra: SimpleInterpreter[Reads, BigDecimal] = new SimpleInterpreter[Reads, BigDecimal] {
+  implicit val bigDecimalReadInterpreter: SimpleInterpreter[Reads, BigDecimal] = new SimpleInterpreter[Reads, BigDecimal] {
     override def schema: Reads[BigDecimal] = Reads.bigDecReads
   }
 
-  implicit val integerAlgebra: SimpleInterpreter[Reads, Int] = new SimpleInterpreter[Reads, Int] {
+  implicit val integerReadInterpreter: SimpleInterpreter[Reads, Int] = new SimpleInterpreter[Reads, Int] {
     override def schema: Reads[Int] = Reads.IntReads
   }
 
-  implicit val longAlgebra: SimpleInterpreter[Reads, Long] = new SimpleInterpreter[Reads, Long] {
+  implicit val longReadInterpreter: SimpleInterpreter[Reads, Long] = new SimpleInterpreter[Reads, Long] {
     override def schema: Reads[Long] = Reads.LongReads
   }
 
-  implicit val bigIntAlgebra: SimpleInterpreter[Reads, BigInt] = new SimpleInterpreter[Reads, BigInt] {
+  implicit val bigIntReadInterpreter: SimpleInterpreter[Reads, BigInt] = new SimpleInterpreter[Reads, BigInt] {
     override def schema: Reads[BigInt] = {
       case JsString(s) =>
         try {
@@ -62,37 +64,37 @@ object json extends MiddlePriority {
     }
   }
 
-  implicit val booleanAlgebra: SimpleInterpreter[Reads, Boolean] = new SimpleInterpreter[Reads, Boolean] {
+  implicit val booleanReadInterpreter: SimpleInterpreter[Reads, Boolean] = new SimpleInterpreter[Reads, Boolean] {
     override def schema: Reads[Boolean] = Reads.BooleanReads
   }
 
-  implicit val stringAlgebra: SimpleInterpreter[Reads, String] = new SimpleInterpreter[Reads, String] {
+  implicit val stringReadInterpreter: SimpleInterpreter[Reads, String] = new SimpleInterpreter[Reads, String] {
     override def schema: Reads[String] = Reads.StringReads
   }
 
-  implicit val dateTimeAlgebra: SimpleInterpreter[Reads, ZonedDateTime] = new SimpleInterpreter[Reads, ZonedDateTime] {
+  implicit val dateTimeReadInterpreter: SimpleInterpreter[Reads, ZonedDateTime] = new SimpleInterpreter[Reads, ZonedDateTime] {
     override def schema: Reads[ZonedDateTime] = Reads.DefaultZonedDateTimeReads
   }
 
-  implicit val timeAlgebra: SimpleInterpreter[Reads, LocalTime] = new SimpleInterpreter[Reads, LocalTime] {
+  implicit val timeReadInterpreter: SimpleInterpreter[Reads, LocalTime] = new SimpleInterpreter[Reads, LocalTime] {
     override def schema: Reads[LocalTime] = Reads.DefaultLocalTimeReads
   }
 
-  implicit val dateAlgebra: SimpleInterpreter[Reads, LocalDate] = new SimpleInterpreter[Reads, LocalDate] {
+  implicit val dateReadInterpreter: SimpleInterpreter[Reads, LocalDate] = new SimpleInterpreter[Reads, LocalDate] {
     override def schema: Reads[LocalDate] = Reads.DefaultLocalDateReads
   }
 }
 
 trait MiddlePriority extends LowPriority {
   import language.higherKinds
-  implicit def manyInterpreter[T, Collection[A] <: Iterable[A], UnderlyingInterpreter <: Interpreter[Reads, T]](implicit algebra: UnderlyingInterpreter, factory: Factory[T, Collection[T]]): ManyInterpreter[Reads, T, Collection, UnderlyingInterpreter] = new ManyInterpreter[Reads, T, Collection, UnderlyingInterpreter] {
+  implicit def manyReadInterpreter[T, Collection[A] <: Iterable[A], UnderlyingInterpreter <: Interpreter[Reads, T]](implicit algebra: UnderlyingInterpreter, factory: Factory[T, Collection[T]]): ManyInterpreter[Reads, T, Collection, UnderlyingInterpreter] = new ManyInterpreter[Reads, T, Collection, UnderlyingInterpreter] {
     override def originalInterpreter: UnderlyingInterpreter = algebra
 
     override def many(schema: Reads[T]): Reads[Collection[T]] =
       Reads.traversableReads[Collection, T](factory, schema)
   }
 
-  implicit def optionalInterpreter[T, P <: Path, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit algebra: UnderlyingInterpreter, pathBuilder: PathBuilder[P]): OptionalInterpreter[Reads, P, T, UnderlyingInterpreter] = new OptionalInterpreter[Reads, P, T, UnderlyingInterpreter] {
+  implicit def optionalReadInterpreter[T, P <: Path, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit algebra: UnderlyingInterpreter, pathBuilder: PathBuilder[P]): OptionalInterpreter[Reads, P, T, UnderlyingInterpreter] = new OptionalInterpreter[Reads, P, T, UnderlyingInterpreter] {
     override def originalInterpreter: UnderlyingInterpreter = algebra
 
     override def optional(path: P, schema: Reads[T], default: Option[Option[T]]): Reads[Option[T]] =
@@ -100,7 +102,7 @@ trait MiddlePriority extends LowPriority {
   }
 
   import play.api.libs.functional.syntax._
-  implicit def semiGroupalInterpreter[A, B, AInterpreter <: Interpreter[Reads, A], BInterpreter <: Interpreter[Reads, B]](implicit algebraA: AInterpreter, algebraB: BInterpreter): SemiGroupalInterpreter[Reads, A, B, AInterpreter, BInterpreter] = new SemiGroupalInterpreter[Reads, A, B, AInterpreter, BInterpreter] {
+  implicit def semiGroupalReadInterpreter[A, B, AInterpreter <: Interpreter[Reads, A], BInterpreter <: Interpreter[Reads, B]](implicit algebraA: AInterpreter, algebraB: BInterpreter): SemiGroupalInterpreter[Reads, A, B, AInterpreter, BInterpreter] = new SemiGroupalInterpreter[Reads, A, B, AInterpreter, BInterpreter] {
     override def originalInterpreterA: AInterpreter = algebraA
 
     override def originalInterpreterB: BInterpreter = algebraB
@@ -108,7 +110,7 @@ trait MiddlePriority extends LowPriority {
     override def product(fa: Reads[A], fb: Reads[B]): Reads[(A, B)] = (fa and fb).tupled
   }
 
-  implicit def oneOfInterpreter[A, B, AInterpreter <: Interpreter[Reads, A], BInterpreter <: Interpreter[Reads, B]](implicit algebraA: AInterpreter, algebraB: BInterpreter): OneOfInterpreter[Reads, A, B, AInterpreter, BInterpreter] = new OneOfInterpreter[Reads, A, B, AInterpreter, BInterpreter] {
+  implicit def oneOfReadInterpreter[A, B, AInterpreter <: Interpreter[Reads, A], BInterpreter <: Interpreter[Reads, B]](implicit algebraA: AInterpreter, algebraB: BInterpreter): OneOfInterpreter[Reads, A, B, AInterpreter, BInterpreter] = new OneOfInterpreter[Reads, A, B, AInterpreter, BInterpreter] {
     override def originalInterpreterA: AInterpreter = algebraA
 
     override def originalInterpreterB: BInterpreter = algebraB
@@ -137,14 +139,14 @@ trait MiddlePriority extends LowPriority {
 
 trait LowPriority extends FinalPriority {
 
-  implicit def invariantInterpreter[A, B, UnderlyingInterpreter <: Interpreter[Reads, A]](implicit underlying: UnderlyingInterpreter): InvariantInterpreter[Reads, A, B, UnderlyingInterpreter] = new InvariantInterpreter[Reads, A, B, UnderlyingInterpreter] {
+  implicit def invariantReadInterpreter[A, B, UnderlyingInterpreter <: Interpreter[Reads, A]](implicit underlying: UnderlyingInterpreter): InvariantInterpreter[Reads, A, B, UnderlyingInterpreter] = new InvariantInterpreter[Reads, A, B, UnderlyingInterpreter] {
     override def underlyingInterpreter: UnderlyingInterpreter = underlying
 
     override def imap(fa: Reads[A])(f: A => B)(g: B => A): Reads[B] =
       fa.map(f)
   }
 
-  implicit def requiredInterpreter[P <: Path, T, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit pathBuilder: PathBuilder[P], interpreter: UnderlyingInterpreter): RequiredInterpreter[Reads, P, T, UnderlyingInterpreter] = new RequiredInterpreter[Reads, P, T, UnderlyingInterpreter] {
+  implicit def requiredReadInterpreter[P <: Path, T, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit pathBuilder: PathBuilder[P], interpreter: UnderlyingInterpreter): RequiredInterpreter[Reads, P, T, UnderlyingInterpreter] = new RequiredInterpreter[Reads, P, T, UnderlyingInterpreter] {
     override def originalInterpreter: UnderlyingInterpreter = interpreter
     override def required(path: P, schema: Reads[T], default: Option[T]): Reads[T] = default
       .map(default => pathBuilder.toJsPath(path).readWithDefault(default)(schema))
@@ -153,7 +155,7 @@ trait LowPriority extends FinalPriority {
 }
 
 trait FinalPriority {
-  implicit def constrainedInterpreter[T, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit algebra: UnderlyingInterpreter): ConstrainedInterpreter[Reads, T, UnderlyingInterpreter] = new ConstrainedInterpreter[Reads, T, UnderlyingInterpreter] {
+  implicit def constrainedReadInterpreter[T, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit algebra: UnderlyingInterpreter): ConstrainedInterpreter[Reads, T, UnderlyingInterpreter] = new ConstrainedInterpreter[Reads, T, UnderlyingInterpreter] {
     override def originalInterpreter: UnderlyingInterpreter = algebra
 
     override def verifying(schema: Reads[T], constraint: Constraint[T]): Reads[T] =

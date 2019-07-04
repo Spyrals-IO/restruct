@@ -1,7 +1,7 @@
 package restruct.examples
 
 import io.github.methrat0n.restruct.schema.Path
-import play.api.libs.json.{ Json, Writes }
+import play.api.libs.json.{ Json, Reads, Writes }
 
 object SyntaxExample extends App {
 
@@ -30,19 +30,15 @@ object SyntaxExample extends App {
       |}
     """.stripMargin
 
-  /*import io.github.methrat0n.restruct.readers.json._
-  val read = GoodUser.tmp.bind[Reads].reads(Json.parse("""{ "name": "111"}""")) match {
+  import io.github.methrat0n.restruct.readers.json._
+  GoodUser.schema.bind[Reads].reads(Json.parse(goodUserJson)) match {
     case play.api.libs.json.JsSuccess(value, _) => println(value)
     case play.api.libs.json.JsError(errors)     => println(errors)
-  }*/
+  }
 
-  //import io.github.methrat0n.restruct.readers.json._
   import io.github.methrat0n.restruct.writers.json._
   val user = GoodUser("charlaine", 32)
-  println(Json.stringify(GoodUser.schema.bind[Writes].writes(user))) /*.w(Json.parse(goodUserJson)) match {
-    case play.api.libs.json.JsSuccess(value, _) => println(value)
-    case play.api.libs.json.JsError(errors)     => println(errors)
-  }*/
+  println(Json.stringify(GoodUser.schema.bind[Writes].writes(user)))
 
   /*(Path \ 0 \ "dt").as[BigInt].bind[Reads, SimpleInterpreter[?[_], BigInt]].reads(Json.parse("111")) match {
     case play.api.libs.json.JsSuccess(value, _) => println(value)
