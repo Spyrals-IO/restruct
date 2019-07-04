@@ -9,16 +9,21 @@ final case class PathCon[PreviousSteps <: Path, Step](previousSteps: PreviousSte
     PathCon(self, step)
   def \(step: Int): PreviousSteps \ Step \ Int =
     PathCon(self, step)
-  def as[Type]: SchemeInferer[Type, PreviousSteps, Step] =
-    SchemeInferer(self)
+  def as[Type]: SchemeInferer[Type] =
+    new SchemeInferer[Type]
 
-  def asOption[Type, TypeInterpreter[Format[_]] <: Interpreter[Format, Type], Scheme <: Schema[Type, TypeInterpreter]](implicit schema: Scheme): OptionalField[PreviousSteps \ Step, Type, TypeInterpreter, Scheme] =
-    OptionalField(self, schema, None)
-}
+  def asOption[Type]: OptionalSchemeInfere[Type] =
+    new OptionalSchemeInfere[Type]
 
-final case class SchemeInferer[Type, PreviousSteps <: Path, Step](path: PathCon[PreviousSteps, Step]) {
-  def apply[TypeInterpreter[Format[_]] <: Interpreter[Format, Type]]()(implicit schema: Schema[Type, TypeInterpreter]): RequiredField[PreviousSteps \ Step, Type, TypeInterpreter] =
-    RequiredField(path, schema, None)
+  final class SchemeInferer[Type] {
+    def apply[TypeInterpreter[Format[_]] <: Interpreter[Format, Type]]()(implicit schema: Schema[Type, TypeInterpreter]): RequiredField[PreviousSteps \ Step, Type, TypeInterpreter] =
+      RequiredField(self, schema, None)
+  }
+
+  final class OptionalSchemeInfere[Type] {
+    def apply[TypeInterpreter[Format[_]] <: Interpreter[Format, Type]]()(implicit schema: Schema[Type, TypeInterpreter]): OptionalField[PreviousSteps \ Step, Type, TypeInterpreter] =
+      OptionalField[PreviousSteps \ Step, Type, TypeInterpreter](self, schema, None)
+  }
 }
 
 sealed trait PathNil extends Path
