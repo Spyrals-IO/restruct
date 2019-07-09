@@ -1,7 +1,7 @@
 package restruct.examples
 
 import io.github.methrat0n.restruct.schema.Path
-import play.api.libs.json.{ Json, Reads, Writes }
+import play.api.libs.json.{ JsSuccess, Json, Reads, Writes }
 
 object SyntaxExample extends App {
 
@@ -23,7 +23,7 @@ object SyntaxExample extends App {
   val goodUserJson =
     """
       |{
-      |  "name": "merlin",
+      |  "name": ["merlin",
       |  "age": 24,
       |
       |  "__type": "Badser"
@@ -40,24 +40,22 @@ object SyntaxExample extends App {
   val user = GoodUser("charlaine", 32)
   println(Json.stringify(GoodUser.schema.bind[Writes].writes(user)))
 
-  /*(Path \ 0 \ "dt").as[BigInt].bind[Reads, SimpleInterpreter[?[_], BigInt]].reads(Json.parse("111")) match {
-    case play.api.libs.json.JsSuccess(value, _) => println(value)
-    case play.api.libs.json.JsError(errors)     => println(errors)
+  /*val many: Reads[List[GoodUser]] = Schema.many.bind[Reads]
+  many.reads(Json.parse(s"""[$goodUserJson, $goodUserJson, $goodUserJson]""")) match {
+    case JsSuccess(value, _)                => println(value)
+    case play.api.libs.json.JsError(errors) => println(errors)
   }*/
 
-  //import io.github.methrat0n.restruct.readers.json._
+  /*val many: Reads[List[GoodUser]] = Schema.many[GoodUser, List]().bind[Reads]
+  many.reads(Json.parse(s"""[$goodUserJson,$goodUserJson,$goodUserJson]""")) match {
+    case JsSuccess(value, _)                => println(value)
+    case play.api.libs.json.JsError(errors) => println(errors)
+  }*/
 
-  //WrappedUser.schema.bind[Reads]
-  //GoodUser.schema.bind[Reads, SemiGroupalInterpreter[?[_], String, Int]]
-
-  //User.schema.bind[Reads, OneOfInterpreter[?[_], (String, Int), (String, Int)]]
-  /*val bsonGoodUser = BSONDocument(
-    "name" -> "merlin",
-    "age" -> 24,
-    "__type" -> "BadUser"
-  )
-
-  User.autoSchema.bind[BsonReader].read(bsonGoodUser)*/
+  BadUser.schema.bind[Reads].reads(Json.parse(goodUserJson)) match {
+    case JsSuccess(value, _)                => println(value)
+    case play.api.libs.json.JsError(errors) => println(errors)
+  }
 }
 
 sealed trait User extends Product with Serializable
@@ -67,28 +65,27 @@ final case class GoodUser(name: String, age: Int) extends User
 import scala.language.postfixOps
 
 object GoodUser {
-
   implicit val schema = (
     (Path \ "name").as[String]() and
     (Path \ "age").as[Int]()
   ).inmap(GoodUser.apply _ tupled)(GoodUser.unapply _ andThen (_.get))
 }
 
-final case class BadUser(name: String, age: Int) extends User
+final case class BadUser(name: List[String], age: Int) extends User
 
 object BadUser {
   implicit val schema =
-    ((Path \ "name").as[String]() and
+    ((Path \ "name").many[String, List]() and
       (Path \ "age").as[Int]()).inmap(BadUser.apply _ tupled)(BadUser.unapply _ andThen (_.get))
 }
 
-final case class WrappedUser(user: GoodUser, text: String)
+final case class WrappedUser(users: GoodUser, texts: String)
 
 object WrappedUser {
   implicit val schema = (
     (Path \ "user").as[GoodUser]() and
     (Path \ "text").as[String]()
-  ).inmap[WrappedUser](WrappedUser.apply _ tupled)(WrappedUser.unapply _ andThen (_.get))
+  ).inmap(WrappedUser.apply _ tupled)(WrappedUser.unapply _ andThen (_.get))
 }
 
 object User {

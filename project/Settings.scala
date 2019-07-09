@@ -18,7 +18,8 @@ object Settings {
         "-Xfatal-warnings",
         "-Xlint",
         "-Xlog-implicits"
-      )
+      ),
+      addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.10.3")
     )
   }
 }

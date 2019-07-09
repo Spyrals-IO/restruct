@@ -14,7 +14,7 @@ object Schemas {
       interpreter.or(schemaA.bind[Format](interpreter.originalInterpreterA), schemaB.bind[Format](interpreter.originalInterpreterB))
   }
 
-  final class SimpleSchema[Type] extends Schema[Type, SimpleInterpreter[?[_], Type]] {
+  final class SimpleSchema[Type] extends Schema[Type, λ[Format[_] => SimpleInterpreter[Format, Type]]] {
     override def bind[Format[_]](implicit interpreter: SimpleInterpreter[Format, Type]): Format[Type] =
       interpreter.schema
   }
