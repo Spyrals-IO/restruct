@@ -1,7 +1,6 @@
 package io.github.methrat0n.restruct.schema
 
 import io.github.methrat0n.restruct.constraints.Constraint
-import io.github.methrat0n.restruct.schema.Interpreter.SimpleInterpreter
 import io.github.methrat0n.restruct.schema.Schemas._
 
 //import scala.language.experimental.macros
@@ -14,10 +13,14 @@ trait Schema[Type, InternalInterpreter[Format[_]] <: Interpreter[Format, Type]] 
   def constraintedBy(constraint: Constraint[Type]): ConstrainedSchema[Type, InternalInterpreter] =
     ConstrainedSchema[Type, InternalInterpreter](self, constraint)
 
-  def and[B, BInterpreter[Format[_]] <: Interpreter[Format, B]](schema: Schema[B, BInterpreter]): And[Type, B, InternalInterpreter, BInterpreter] =
+  def and[B, BInterpreter[Format[_]] <: Interpreter[Format, B]](
+    schema: Schema[B, BInterpreter]
+  ): And[Type, B, InternalInterpreter, BInterpreter] =
     And[Type, B, InternalInterpreter, BInterpreter](self, schema)
 
-  def or[B, BInterpreter[Format[_]] <: Interpreter[Format, B]](schema: Schema[B, BInterpreter]): Or[Type, B, InternalInterpreter, BInterpreter] =
+  def or[B, BInterpreter[Format[_]] <: Interpreter[Format, B]](
+    schema: Schema[B, BInterpreter]
+  ): Or[Type, B, InternalInterpreter, BInterpreter] =
     Or[Type, B, InternalInterpreter, BInterpreter](self, schema)
 
   def inmap[B](f: Type => B)(g: B => Type): InvariantSchema[Type, B, InternalInterpreter] =
@@ -33,13 +36,19 @@ object Schema extends LowPriorityImplicits {
 
 private[schema] trait LowPriorityImplicits {
 
-  type SimpleStringInterpreter[Format[_]] = SimpleInterpreter[Format, String]
+  /*implicit def many[Type, Collection[A] <: Iterable[A]] =
+    new SchemInferer[Type, Collection]
 
+  final class SchemInferer[Type, Collection[A] <: Iterable[A]] {
+    def apply[TypeInter[Format[_]] <: Interpreter[Format, Type]]()(
+      implicit
+      schema: Schema[Type, TypeInter]
+    ): ManySchema[Collection, Type, TypeInter] =
+      new ManySchema[Collection, Type, TypeInter](schema)
+  }*/
+
+  implicit def simpleString: SimpleSchema[String] = new SimpleSchema[String]
   implicit def simple[Type <: AnyVal]: SimpleSchema[Type] = new SimpleSchema[Type]
-  implicit val simpleString: SimpleSchema[String] = new SimpleSchema[String]
-
-  implicit def many[Type, Collection[A] <: Iterable[A], TypeInterpreter[Format[_]] <: Interpreter[Format, Type]](implicit schema: Schema[Type, TypeInterpreter]): ManySchema[Collection, Type, TypeInterpreter] =
-    new ManySchema[Collection, Type, TypeInterpreter](schema)
 }
 /*
 object StrictSchema {
