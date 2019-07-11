@@ -26,7 +26,7 @@ object Interpreter {
 
   @implicitNotFound("""
   Cannot find an interpreter for ${Type}.
-  Maybe the format you ask for does not support the path you used.
+  Maybe the format you ask for does not support the path you used (see documentation for this format).
 """)
   trait RequiredInterpreter[Format[_], P <: Path, Type, UnderlyingInterpreter <: Interpreter[Format, Type]] extends Interpreter[Format, Type] {
     def originalInterpreter: UnderlyingInterpreter
@@ -35,7 +35,7 @@ object Interpreter {
 
   @implicitNotFound("""
   Cannot find an interpreter for ${Type}.
-  Maybe the format you ask for does not support the path you used.
+  Maybe the format you ask for does not support the path you used (see documentation for this format).
 """)
   trait OptionalInterpreter[Format[_], P <: Path, Type, UnderlyingInterpreter <: Interpreter[Format, Type]] extends Interpreter[Format, Option[Type]] {
     def originalInterpreter: UnderlyingInterpreter
@@ -53,6 +53,7 @@ object Interpreter {
   @implicitNotFound("""
   Cannot find an interpreter for Either[${A}, ${B}].
   It needs the interpreters for ${A} and ${B}, maybe their missing ?
+  Or maybe your path isn't supported by the format you want (see documentation for this format).
 """)
   trait OneOfInterpreter[Format[_], A, B, AInterpreter <: Interpreter[Format, A], BInterpreter <: Interpreter[Format, B]] extends Interpreter[Format, Either[A, B]] {
     def originalInterpreterA: AInterpreter
@@ -74,6 +75,7 @@ object Interpreter {
   @implicitNotFound("""
   Cannot find an interpreter for ${A} with ${B}.
   It needs the interpreters for ${A} and ${B}, maybe their missing ?
+  Or maybe your path isn't supported by the format you want (see documentation for this format).
 """)
   trait InvariantInterpreter[Format[_], A, B, UnderlyingInterpreter <: Interpreter[Format, A]] extends Interpreter[Format, B] {
     def underlyingInterpreter: UnderlyingInterpreter
@@ -83,6 +85,7 @@ object Interpreter {
   @implicitNotFound("""
   Cannot find an interpreter for (${A}, ${B}).
   It needs the interpreters for ${A} and ${B}, maybe their missing ?
+  Or maybe your path isn't supported by the format you want (see documentation for this format).
 """)
   trait SemiGroupalInterpreter[Format[_], A, B, AInterpreter <: Interpreter[Format, A], BInterpreter <: Interpreter[Format, B]] extends Interpreter[Format, (A, B)] {
     def originalInterpreterA: AInterpreter

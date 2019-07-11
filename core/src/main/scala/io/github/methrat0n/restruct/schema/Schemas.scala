@@ -19,7 +19,7 @@ object Schemas {
       interpreter.schema
   }
 
-  final class ManySchema[Collection[A] <: Iterable[A], Type, TypeInterpreter[Format[_]] <: Interpreter[Format, Type]](schema: Schema[Type, TypeInterpreter]) extends Schema[Collection[Type], λ[Format[_] => ManyInterpreter[Format, Type, Collection, TypeInterpreter[Format]]]] {
+  final case class ManySchema[Collection[A] <: Iterable[A], Type, TypeInterpreter[Format[_]] <: Interpreter[Format, Type]](schema: Schema[Type, TypeInterpreter]) extends Schema[Collection[Type], λ[Format[_] => ManyInterpreter[Format, Type, Collection, TypeInterpreter[Format]]]] {
     override def bind[Format[_]](implicit interpreter: ManyInterpreter[Format, Type, Collection, TypeInterpreter[Format]]): Format[Collection[Type]] =
       interpreter.many(schema.bind[Format](interpreter.originalInterpreter))
   }

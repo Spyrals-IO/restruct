@@ -1,12 +1,12 @@
 package io.github.methrat0n.restruct.writers
 
-import java.time.{LocalDate, LocalTime, ZonedDateTime}
+import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 
-import io.github.methrat0n.restruct.schema.Interpreter.SimpleInterpreter
+import io.github.methrat0n.restruct.schema.{ Path, Schema }
 import io.github.methrat0n.restruct.schema.Schema._
 import io.github.methrat0n.restruct.writers.json._
-import org.scalatest.{FlatSpec, Matchers}
-import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsString, Writes}
+import org.scalatest.{ FlatSpec, Matchers }
+import play.api.libs.json._
 
 class jsonSpec extends FlatSpec with Matchers {
 
@@ -19,7 +19,7 @@ class jsonSpec extends FlatSpec with Matchers {
   private val shortTest: Short = 23456
   private val floatTest: Float = 12.2f
   private val bigDecimalTest: BigDecimal = BigDecimal("1267888889999999999999999999998888867699767611111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111.1")
-  private val longTest: Long = 1267888889999999999l
+  private val longTest: Long = 1267888889999999999L
   private val bigIntTest: BigInt = BigInt("1267888889999999999999999999998888867699767611111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
   private val dateTimeTest: ZonedDateTime = ZonedDateTime.parse("2018-12-26T00:08:16.025415+01:00[Europe/Paris]")
   private val timeTest: LocalTime = LocalTime.parse("00:08:16.025415")
@@ -28,6 +28,11 @@ class jsonSpec extends FlatSpec with Matchers {
   private val emptyList = List.empty
   private val stringList = List("string", "string")
   private val intList = List(0, 1)
+
+  private val requiredString = (Path \ "string").as[String]()
+  private val complexRequiredString = (Path \ "level one" \ "level two").as[String]()
+  //private val complexRequiredStringWithIndex = ("string" \ 0).as[String]
+  private val optionalString = (Path \ "string").asOption[String]()
 
   //This exist to be able to call BigDecimal.apply without a warning being raised. When a SuppressWarning or equivalent is added to scala
   //this code should be removed
@@ -248,17 +253,17 @@ class jsonSpec extends FlatSpec with Matchers {
   behavior of "JsonWriterInterpreter for BigDecimal"
 
   "JsonWriterInterpreter" should "find a json writer for bigDecimal" in {
-    simple[BigDecimal].bind[Writes]
+    simpleBigDecimal.bind[Writes]
   }
   it should "write bigDecimal as JsNumber" in {
-    val bigDecimalWriter = simple[BigDecimal].bind[Writes]
+    val bigDecimalWriter = simpleBigDecimal.bind[Writes]
 
     val found = bigDecimalWriter.writes(bigDecimalTest)
     val expect = JsNumber(bigDecimalTest)
     found shouldBe expect
   }
   it should "write the same than the default bigDecimal writer" in {
-    val derived: Writes[BigDecimal] = simple[BigDecimal].bind[Writes]
+    val derived: Writes[BigDecimal] = simpleBigDecimal.bind[Writes]
     val default: Writes[BigDecimal] = Writes.BigDecimalWrites
 
     val found = derived.writes(bigDecimalTest)
@@ -267,14 +272,14 @@ class jsonSpec extends FlatSpec with Matchers {
     found shouldBe expect
   }
   it should "write integer as JsNumber using bigDecimal writer" in {
-    val bigDecimalWriter = simple[BigDecimal].bind[Writes]
+    val bigDecimalWriter = simpleBigDecimal.bind[Writes]
 
     val found = bigDecimalWriter.writes(integerTest)
     val expect = JsNumber(integerTest)
     found shouldBe expect
   }
   it should "write decimal as JsNumber using bigDecimal writer" in {
-    val bigDecimalWriter = simple[BigDecimal].bind[Writes]
+    val bigDecimalWriter = simpleBigDecimal.bind[Writes]
 
     val found = bigDecimalWriter.writes(decimalTest)
     val expect = JsNumber(decimalTest)
@@ -327,17 +332,17 @@ class jsonSpec extends FlatSpec with Matchers {
   behavior of "JsonWriterInterpreter for bigInt"
 
   "JsonWriterInterpreter" should "find a json writer for bigInt" in {
-    simple[BigInt].bind[Writes]
+    simpleBigInt.bind[Writes]
   }
   it should "write bigInt as JsNumber" in {
-    val bigIntWriter = simple[BigInt].bind[Writes]
+    val bigIntWriter = simpleBigInt.bind[Writes]
 
     val found = bigIntWriter.writes(bigIntTest)
     val expect = JsNumber(BigDecimal(bigIntTest))
     found shouldBe expect
   }
   it should "write integer as JsNumber using bigInt writer" in {
-    val bigIntWriter = simple[BigInt].bind[Writes]
+    val bigIntWriter = simpleBigInt.bind[Writes]
 
     val found = bigIntWriter.writes(integerTest)
     val expect = JsNumber(BigDecimal(integerTest))
@@ -347,17 +352,17 @@ class jsonSpec extends FlatSpec with Matchers {
   behavior of "JsonWriterInterpreter for dateTime"
 
   "JsonWriterInterpreter" should "find a json writer for dateTime" in {
-    simple[ZonedDateTime].bind[Writes]
+    simpleZDT.bind[Writes]
   }
   it should "write dateTime as JsString" in {
-    val dateTimeWriter = simple[ZonedDateTime].bind[Writes]
+    val dateTimeWriter = simpleZDT.bind[Writes]
 
     val found = dateTimeWriter.writes(dateTimeTest)
     val expect = JsString(dateTimeTest.toString)
     found shouldBe expect
   }
   it should "write the same than the default dateTime writer" in {
-    val derived: Writes[ZonedDateTime] = simple[ZonedDateTime].bind[Writes]
+    val derived: Writes[ZonedDateTime] = simpleZDT.bind[Writes]
     val default: Writes[ZonedDateTime] = Writes.DefaultZonedDateTimeWrites
 
     val found = derived.writes(dateTimeTest)
@@ -369,10 +374,10 @@ class jsonSpec extends FlatSpec with Matchers {
   behavior of "JsonWriterInterpreter for time"
 
   "JsonWriterInterpreter" should "find a json writer for time" in {
-    simple[LocalTime].bind[Writes]
+    simpleT.bind[Writes]
   }
   it should "write time as JsString" in {
-    val timeWriter = simple[LocalTime].bind[Writes]
+    val timeWriter = simpleT.bind[Writes]
 
     val found = timeWriter.writes(timeTest)
     val expect = JsString(timeTest.toString)
@@ -380,7 +385,7 @@ class jsonSpec extends FlatSpec with Matchers {
     found shouldBe expect
   }
   it should "write the same than the default time writer" in {
-    val derived: Writes[LocalTime] = simple[LocalTime].bind[Writes]
+    val derived: Writes[LocalTime] = simpleT.bind[Writes]
     val default: Writes[LocalTime] = Writes.DefaultLocalTimeWrites
 
     val found = derived.writes(timeTest)
@@ -392,17 +397,17 @@ class jsonSpec extends FlatSpec with Matchers {
   behavior of "JsonWriterInterpreter for date"
 
   "JsonWriterInterpreter" should "find a json writer for date" in {
-    simple[LocalDate].bind[Writes]
+    simpleD.bind[Writes]
   }
   it should "write date as JsString" in {
-    val dateWriter = simple[LocalDate].bind[Writes]
+    val dateWriter = simpleD.bind[Writes]
 
     val found = dateWriter.writes(dateTest)
     val expect = JsString(dateTest.toString)
     found shouldBe expect
   }
   it should "write the same than the default date writer" in {
-    val derived: Writes[LocalDate] = simple[LocalDate].bind[Writes]
+    val derived: Writes[LocalDate] = simpleD.bind[Writes]
     val default: Writes[LocalDate] = Writes.DefaultLocalDateWrites
 
     val found = derived.writes(dateTest)
@@ -414,25 +419,84 @@ class jsonSpec extends FlatSpec with Matchers {
   behavior of "JsonWriterInterpreter for empty list"
 
   it should "write an empty list to an empty JsArray" in {
-    val emptyStringListWriter: Writes[List[String]] = many.bind[Writes]
+    val emptyStringListWriter: Writes[List[String]] = Schema.many[String, List]().bind[Writes]
 
     val found = emptyStringListWriter.writes(emptyList)
     val expect = JsArray()
     found shouldBe expect
   }
   it should "write a string list to a JsArray of JsString" in {
-    val stringListWriter: Writes[List[String]] = many.bind[Writes]
+    val stringListWriter: Writes[List[String]] = Schema.many[String, List]().bind[Writes]
 
     val found = stringListWriter.writes(stringList)
     val expect = JsArray(List(JsString("string"), JsString("string")))
     found shouldBe expect
   }
   it should "write an int list  to a JsArray of JsNumber" in {
-    val intListWriter: Writes[List[Int]] = many.bind[Writes]
+    val intListWriter: Writes[List[Int]] = Schema.many[Int, List]().bind[Writes]
 
     val found = intListWriter.writes(intList)
     val expect = JsArray(List(JsNumber(0), JsNumber(1)))
     found shouldBe expect
   }
 
+  behavior of "PlayJson Writes fields"
+
+  it should "write an object to contains a required string" in {
+    val requiredStringWriter = requiredString.bind[Writes]
+
+    val found = requiredStringWriter.writes("a string")
+    val expect = Json.obj(
+      "string" -> "a string"
+    )
+    found shouldBe expect
+  }
+  it should "write a second level of object if it's describe in the path" in {
+    val complexRequiredStringWriter = complexRequiredString.bind[Writes]
+
+    val found = complexRequiredStringWriter.writes("a string")
+    val expect = Json.obj(
+      "level one" -> Json.obj(
+        "level two" -> "a string"
+      )
+    )
+    found shouldBe expect
+  }
+
+  it should "write optional string if present" in {
+    val optionalStringWriter = optionalString.bind[Writes]
+
+    val found = optionalStringWriter.writes(Some("string"))
+    val expect = Json.obj(
+      "string" -> "string"
+    )
+    found shouldBe expect
+  }
+  it should "write optional string if abscent" in {
+    val optionalStringWriter = optionalString.bind[Writes]
+
+    val found = optionalStringWriter.writes(None)
+    val expect = Json.obj()
+    found shouldBe expect
+  }
+
+  it should "write case class instances" in {
+    val caseClassWriter = RequiredStringAndInt.schema.bind[Writes]
+
+    val found = caseClassWriter.writes(RequiredStringAndInt("string", 0))
+    val expect = Json.obj(
+      "string" -> "string",
+      "int" -> 0
+    )
+    found shouldBe expect
+  }
+}
+
+final case class RequiredStringAndInt(string: String, int: Int)
+object RequiredStringAndInt {
+  import language.postfixOps
+  val schema = (
+    (Path \ "string").as[String]() and
+    (Path \ "int").as[Int]()
+  ).inmap(RequiredStringAndInt.apply _ tupled)(RequiredStringAndInt.unapply _ andThen (_.get))
 }

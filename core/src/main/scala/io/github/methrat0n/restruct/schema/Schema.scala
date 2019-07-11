@@ -1,5 +1,7 @@
 package io.github.methrat0n.restruct.schema
 
+import java.time.{ LocalDate, LocalTime, ZonedDateTime }
+
 import io.github.methrat0n.restruct.constraints.Constraint
 import io.github.methrat0n.restruct.schema.Schemas._
 
@@ -35,19 +37,23 @@ object Schema extends LowPriorityImplicits {
 }
 
 private[schema] trait LowPriorityImplicits {
+  def many[Type, Collection[A] <: Iterable[A]]: ManySchemeInferer[Type, Collection] =
+    new ManySchemeInferer[Type, Collection]
 
-  /*implicit def many[Type, Collection[A] <: Iterable[A]] =
-    new SchemInferer[Type, Collection]
-
-  final class SchemInferer[Type, Collection[A] <: Iterable[A]] {
-    def apply[TypeInter[Format[_]] <: Interpreter[Format, Type]]()(
+  final class ManySchemeInferer[Type, Collection[A] <: Iterable[A]] {
+    def apply[TypeInterpreter[Format[_]] <: Interpreter[Format, Type]]()(
       implicit
-      schema: Schema[Type, TypeInter]
-    ): ManySchema[Collection, Type, TypeInter] =
-      new ManySchema[Collection, Type, TypeInter](schema)
-  }*/
+      schema: Schema[Type, TypeInterpreter]
+    ): ManySchema[Collection, Type, TypeInterpreter] =
+      new ManySchema[Collection, Type, TypeInterpreter](schema)
+  }
 
   implicit def simpleString: SimpleSchema[String] = new SimpleSchema[String]
+  implicit def simpleBigDecimal: SimpleSchema[BigDecimal] = new SimpleSchema[BigDecimal]
+  implicit def simpleBigInt: SimpleSchema[BigInt] = new SimpleSchema[BigInt]
+  implicit def simpleZDT: SimpleSchema[ZonedDateTime] = new SimpleSchema[ZonedDateTime]
+  implicit def simpleD: SimpleSchema[LocalDate] = new SimpleSchema[LocalDate]
+  implicit def simpleT: SimpleSchema[LocalTime] = new SimpleSchema[LocalTime]
   implicit def simple[Type <: AnyVal]: SimpleSchema[Type] = new SimpleSchema[Type]
 }
 /*
