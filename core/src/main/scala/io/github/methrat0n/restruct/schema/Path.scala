@@ -14,7 +14,9 @@ final case class PathCon[PreviousSteps <: Path, Step](previousSteps: PreviousSte
   def as[Type]: SchemeInferer[Type] =
     new SchemeInferer[Type]
 
-  //TODO remove and use Schema.many implicit in as
+  def asOption[Type]: OptionalSchemeInfere[Type] =
+    new OptionalSchemeInfere[Type]
+
   def many[Type, Collection[A] <: Iterable[A]]: ManySchemeInferer[Type, Collection] =
     new ManySchemeInferer[Type, Collection]
 
@@ -25,9 +27,6 @@ final case class PathCon[PreviousSteps <: Path, Step](previousSteps: PreviousSte
     ): RequiredField[PreviousSteps \ Step, Collection[Type], λ[Format[_] => ManyInterpreter[Format, Type, Collection, TypeInterpreter[Format]]]] =
       RequiredField(self, new ManySchema[Collection, Type, TypeInterpreter](schema), None)
   }
-
-  def asOption[Type]: OptionalSchemeInfere[Type] =
-    new OptionalSchemeInfere[Type]
 
   final class SchemeInferer[Type] {
     def apply[TypeInterpreter[Format[_]] <: Interpreter[Format, Type]]()(
