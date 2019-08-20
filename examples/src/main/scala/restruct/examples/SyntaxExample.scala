@@ -1,7 +1,8 @@
 package restruct.examples
 
 import io.github.methrat0n.restruct.schema.Path
-import play.api.libs.json.{ Json, Reads, Writes }
+import play.api.libs.json.{Json, Reads, Writes}
+import play.api.mvc.QueryStringBindable
 
 object SyntaxExample extends App {
 
@@ -49,19 +50,24 @@ object SyntaxExample extends App {
 
 sealed trait User extends Product with Serializable
 
-final case class GoodUser(name: String, age: Int) extends User
+final case class GoodUser(name: String, age: String) extends User
 
 import scala.language.postfixOps
 
 object GoodUser {
   implicit val schema = (
     (Path \ "name").as[String]() and
-    (Path \ "age").as[Int]()
+    (Path \ "age").as[String]()
   ).inmap(GoodUser.apply _ tupled)(GoodUser.unapply _ andThen (_.get))
 
   implicit val reads: Reads[GoodUser] = {
     import io.github.methrat0n.restruct.readers.json._
     GoodUser.schema.bind[Reads]
+  }
+
+  implicit val queryStringBindable: QueryStringBindable[GoodUser] = {
+    import io.github.methrat0n.restruct.handlers.queryStringBindable._
+    GoodUser.schema.bind[QueryStringBindable]
   }
 }
 
