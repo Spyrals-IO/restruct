@@ -89,7 +89,7 @@ lazy val examples = (project in file("./examples"))
   .settings(commonSettings: _*)
   .settings(name := "restruct-examples")
   //.settings(libraryDependencies += Dependencies.restruct.reads)
-  .dependsOn(reads, writes)
+  .dependsOn(reads, writes, queryStringBindable)
 
 lazy val commonSettings =
   Settings.scala.commonSettings ++
