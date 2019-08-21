@@ -12,7 +12,7 @@ import scala.collection.Factory
 import scala.util.Try
 
 object queryStringBindable {
-  
+
   implicit val stringInterpreter: SimpleInterpreter[QueryStringBindable, String] = new SimpleInterpreter[QueryStringBindable, String] {
     override def schema: QueryStringBindable[String] = QueryStringBindable.bindableString
   }

@@ -2,7 +2,7 @@
 lazy val restruct = (project in file("."))
   .settings(commonSettings: _*)
   .settings(name := "restruct-all")
-  .aggregate(core, jsonSchema, playJson, enumeratum, configLoader, queryStringBindable)
+  .aggregate(core, playJson, enumeratum, configLoader, queryStringBindable)
 
 lazy val scalaReflect = Def.setting { "org.scala-lang" % "scala-reflect" % Settings.scala.version }
 lazy val core = (project in file("./core"))
@@ -11,12 +11,6 @@ lazy val core = (project in file("./core"))
   .settings(libraryDependencies ++= coreDependencies)
   .settings(scalacOptions += "-language:higherKinds")
   .settings(name := "restruct-core")
-
-lazy val jsonSchema = (project in file("./jsonSchema"))
-  .settings(commonSettings: _*)
-  .settings(libraryDependencies ++= playJsonDependencies)
-  .settings(name := "restruct-json-schema")
-  .dependsOn(core, writes)
 
 lazy val playJson = (project in file("./playJson"))
   .settings(commonSettings: _*)
