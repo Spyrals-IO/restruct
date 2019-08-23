@@ -1,3 +1,0 @@
-package io.github.methrat0n.restruct.readers.config
-
-object configLoader extends SimpleConfigInterpreter with ComplexConfigInterpreter with FieldConfigInterpreter
