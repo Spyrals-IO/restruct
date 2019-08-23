@@ -1,11 +1,11 @@
 package io.github.methrat0n.restruct.handlers
 
-import java.time.{LocalDate, LocalTime, ZonedDateTime}
+import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 
 import io.github.methrat0n.restruct.constraints.Constraint
 import io.github.methrat0n.restruct.schema.Interpreter._
 import io.github.methrat0n.restruct.schema.Path.\
-import io.github.methrat0n.restruct.schema.{Interpreter, PathNil}
+import io.github.methrat0n.restruct.schema.{ Interpreter, PathNil }
 import play.api.mvc.QueryStringBindable
 
 import scala.collection.Factory
@@ -35,10 +35,10 @@ object queryStringBindable {
           .flatMap(either =>
             if (either.isLeft)
               integerInterpreter.schema.bind(key, params).map(_.flatMap(int =>
-                if (int > Byte.MaxValue || int < Byte.MinValue)
-                  Left(s"Cannot parse parameter $key with value '$int' as Byte: $key is out of the byte bounds")
-                else
-                  Right(int.toByte)))
+              if (int > Byte.MaxValue || int < Byte.MinValue)
+                Left(s"Cannot parse parameter $key with value '$int' as Byte: $key is out of the byte bounds")
+              else
+                Right(int.toByte)))
             else Some(either.map(_.toByte)))
 
       override def unbind(key: String, value: Byte): String =
@@ -51,10 +51,10 @@ object queryStringBindable {
         QueryStringBindable.bindableChar.bind(key, params).flatMap(either =>
           if (either.isLeft)
             integerInterpreter.schema.bind(key, params).map(_.flatMap(int =>
-              if (int > Short.MaxValue || int < Short.MinValue)
-                Left(s"Cannot parse parameter $key with value '$int' as Short: $key is out of the short bounds")
-              else
-                Right(int.toShort)))
+            if (int > Short.MaxValue || int < Short.MinValue)
+              Left(s"Cannot parse parameter $key with value '$int' as Short: $key is out of the short bounds")
+            else
+              Right(int.toShort)))
           else Some(either.map(_.toShort)))
 
       override def unbind(key: String, value: Short): String =
@@ -225,16 +225,16 @@ object queryStringBindable {
     override def originalInterpreterB: BInterpreter = interpreterB
 
     /**
-      * Should return a success, if any, or concatenate errors.
-      *
-      * fa == sucess => fa result in Left
-      * fa == error && fb == sucess => fb result in Right
-      * fa == error && fb == error => concatenate fa and fb errors into F error handling
-      *
-      * If two successes are found, fa will be choosen.
-      *
-      * @return F in error (depends on the implementing F) or successful F with one of the two value
-      */
+     * Should return a success, if any, or concatenate errors.
+     *
+     * fa == sucess => fa result in Left
+     * fa == error && fb == sucess => fb result in Right
+     * fa == error && fb == error => concatenate fa and fb errors into F error handling
+     *
+     * If two successes are found, fa will be choosen.
+     *
+     * @return F in error (depends on the implementing F) or successful F with one of the two value
+     */
     override def or(fa: QueryStringBindable[A], fb: QueryStringBindable[B]): QueryStringBindable[Either[A, B]] =
       new QueryStringBindable[Either[A, B]] {
         override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, Either[A, B]]] =
