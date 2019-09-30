@@ -1,8 +1,7 @@
 package restruct.examples
 
 import io.github.methrat0n.restruct.schema.Path
-import play.api.libs.json.{Json, Reads, Writes}
-import play.api.mvc.QueryStringBindable
+import play.api.libs.json.{ Format, Reads }
 
 object SyntaxExample extends App {
 
@@ -30,18 +29,22 @@ object SyntaxExample extends App {
       |  "__type": "Badser"
       |}
     """.stripMargin
-
-  import io.github.methrat0n.restruct.readers.json._
-  GoodUser.schema.bind[Reads].reads(Json.parse(goodUserJson)) match {
+  /*GoodUser.schema.bind[Format].reads(Json.parse(goodUserJson)) match {
     case play.api.libs.json.JsSuccess(value, _) => println(value)
     case play.api.libs.json.JsError(errors)     => println(errors)
-  }
+  }*/
 
-  import io.github.methrat0n.restruct.writers.json._
-  val user = GoodUser("charlaine", 32)
-  println(Json.stringify(GoodUser.schema.bind[Writes].writes(user)))
+  /*import io.github.methrat0n.restruct.handlers.json._
+  (Path \ "name").as[String]().bind[Format].reads(JsString("yololo")) match {
+    case play.api.libs.json.JsSuccess(value, _) => println(value)
+    case play.api.libs.json.JsError(errors)     => println(errors)
+  }*/
 
-  println(Json.parse(s"""{"user": [$goodUserJson, $goodUserJson, $goodUserJson], "text":"qqzdd"}""").as[WrappedUser])
+  //import io.github.methrat0n.restruct.writers.json._
+  //val user = GoodUser("charlaine", "32")
+  //println(Json.stringify(GoodUser.schema.bind[Format].writes(user)))
+
+  //println(Json.parse(s"""{"user": [$goodUserJson, $goodUserJson, $goodUserJson], "text":"qqzdd"}""").as[WrappedUser])
   /*BadUser.schema.bind[Reads].reads(Json.parse(goodUserJson)) match {
     case JsSuccess(value, _)                => println(value)
     case play.api.libs.json.JsError(errors) => println(errors)
@@ -62,13 +65,20 @@ object GoodUser {
 
   implicit val reads: Reads[GoodUser] = {
     import io.github.methrat0n.restruct.readers.json._
-    GoodUser.schema.bind[Reads]
+    schema.bind[Reads]
   }
 
-  implicit val queryStringBindable: QueryStringBindable[GoodUser] = {
+  /*implicit val queryStringBindable: QueryStringBindable[GoodUser] = {
     import io.github.methrat0n.restruct.handlers.queryStringBindable._
-    GoodUser.schema.bind[QueryStringBindable]
-  }
+    GoodUser.schema.bind[QueryStringBindable](
+      invariantQueryStringBindableInterpreter(
+        semiGroupalQueryStringBindableInterpreter(
+          requiredQueryStringBindableInterpreter(Schema.simpleString),
+          requiredQueryStringBindableInterpreter(Schema.simpleString)
+        )
+      )
+    )
+  }*/
 }
 
 final case class BadUser(name: List[String], age: Int) extends User
@@ -77,6 +87,11 @@ object BadUser {
   implicit val schema =
     ((Path \ "name").many[String, List]() and
       (Path \ "age").as[Int]()).inmap(BadUser.apply _ tupled)(BadUser.unapply _ andThen (_.get))
+
+  implicit val reads: Reads[BadUser] = {
+    import io.github.methrat0n.restruct.handlers.json._
+    schema.bind[Format]
+  }
 }
 
 final case class WrappedUser(users: List[GoodUser], texts: String)
@@ -88,7 +103,7 @@ object WrappedUser {
   ).inmap(WrappedUser.apply _ tupled)(WrappedUser.unapply _ andThen (_.get))
   implicit val reads: Reads[WrappedUser] = {
     import io.github.methrat0n.restruct.readers.json._
-    WrappedUser.schema.bind[Reads]
+    schema.bind[Reads]
   }
 }
 

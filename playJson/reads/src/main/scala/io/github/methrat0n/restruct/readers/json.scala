@@ -3,6 +3,7 @@ package io.github.methrat0n.restruct.readers
 import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 
 import io.github.methrat0n.restruct.constraints.Constraint
+import io.github.methrat0n.restruct.readers.json.ReadsPathBuilder
 import io.github.methrat0n.restruct.schema.Interpreter._
 import io.github.methrat0n.restruct.schema.Path.\
 import io.github.methrat0n.restruct.schema._
@@ -83,6 +84,19 @@ object json extends MiddlePriority {
   implicit val dateReadInterpreter: SimpleInterpreter[Reads, LocalDate] = new SimpleInterpreter[Reads, LocalDate] {
     override def schema: Reads[LocalDate] = Reads.DefaultLocalDateReads
   }
+
+  trait ReadsPathBuilder[P <: Path] {
+    def toJsPath(path: P): JsPath
+  }
+
+  object ReadsPathBuilder {
+    implicit def stringStep2JsPath[RemainingPath <: Path](implicit remainingPath: ReadsPathBuilder[RemainingPath]): ReadsPathBuilder[RemainingPath \ String] =
+      (path: RemainingPath \ String) => JsPath(remainingPath.toJsPath(path.previousSteps).path :+ KeyPathNode(path.step))
+    implicit def intStep2JsPath[RemainingPath <: Path](implicit remainingPath: ReadsPathBuilder[RemainingPath]): ReadsPathBuilder[RemainingPath \ Int] =
+      (path: RemainingPath \ Int) => JsPath(remainingPath.toJsPath(path.previousSteps).path :+ IdxPathNode(path.step))
+    implicit def emptyStep2JsPath: ReadsPathBuilder[PathNil] =
+      (_: PathNil) => JsPath(List.empty)
+  }
 }
 
 trait MiddlePriority extends LowPriority {
@@ -94,7 +108,7 @@ trait MiddlePriority extends LowPriority {
       Reads.traversableReads[Collection, T](factory, schema)
   }
 
-  implicit def optionalReadInterpreter[T, P <: Path, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit algebra: UnderlyingInterpreter, pathBuilder: PathBuilder[P]): OptionalInterpreter[Reads, P, T, UnderlyingInterpreter] = new OptionalInterpreter[Reads, P, T, UnderlyingInterpreter] {
+  implicit def optionalReadInterpreter[T, P <: Path, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit algebra: UnderlyingInterpreter, pathBuilder: ReadsPathBuilder[P]): OptionalInterpreter[Reads, P, T, UnderlyingInterpreter] = new OptionalInterpreter[Reads, P, T, UnderlyingInterpreter] {
     override def originalInterpreter: UnderlyingInterpreter = algebra
 
     override def optional(path: P, schema: Reads[T], default: Option[Option[T]]): Reads[Option[T]] =
@@ -146,7 +160,7 @@ trait LowPriority extends FinalPriority {
       fa.map(f)
   }
 
-  implicit def requiredReadInterpreter[P <: Path, T, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit pathBuilder: PathBuilder[P], interpreter: UnderlyingInterpreter): RequiredInterpreter[Reads, P, T, UnderlyingInterpreter] = new RequiredInterpreter[Reads, P, T, UnderlyingInterpreter] {
+  implicit def requiredReadInterpreter[P <: Path, T, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit pathBuilder: ReadsPathBuilder[P], interpreter: UnderlyingInterpreter): RequiredInterpreter[Reads, P, T, UnderlyingInterpreter] = new RequiredInterpreter[Reads, P, T, UnderlyingInterpreter] {
     override def originalInterpreter: UnderlyingInterpreter = interpreter
     override def required(path: P, schema: Reads[T], default: Option[T]): Reads[T] = default
       .map(default => pathBuilder.toJsPath(path).readWithDefault(default)(schema))
@@ -161,17 +175,4 @@ trait FinalPriority {
     override def verifying(schema: Reads[T], constraint: Constraint[T]): Reads[T] =
       schema.filter(JsonValidationError(s"error.constraints.${constraint.name}", constraint.args: _*))(constraint.validate)
   }
-}
-
-trait PathBuilder[P <: Path] {
-  def toJsPath(path: P): JsPath
-}
-
-object PathBuilder {
-  implicit def stringStep2JsPath[RemainingPath <: Path](implicit remainingPath: PathBuilder[RemainingPath]): PathBuilder[RemainingPath \ String] =
-    (path: RemainingPath \ String) => JsPath(remainingPath.toJsPath(path.previousSteps).path :+ KeyPathNode(path.step))
-  implicit def intStep2JsPath[RemainingPath <: Path](implicit remainingPath: PathBuilder[RemainingPath]): PathBuilder[RemainingPath \ Int] =
-    (path: RemainingPath \ Int) => JsPath(remainingPath.toJsPath(path.previousSteps).path :+ IdxPathNode(path.step))
-  implicit def emptyStep2JsPath: PathBuilder[PathNil] =
-    (_: PathNil) => JsPath(List.empty)
 }

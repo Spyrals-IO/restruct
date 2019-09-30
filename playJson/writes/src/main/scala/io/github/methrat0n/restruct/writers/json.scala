@@ -53,20 +53,20 @@ object json {
   }
 
   import language.higherKinds
-  implicit def manyWritesInterpreter[Collection[A] <: Iterable[A], Type, UnderlyingInterpreter <: Interpreter[Writes, Type]](implicit original: UnderlyingInterpreter): ManyInterpreter[Writes, Type, Collection, UnderlyingInterpreter] = new ManyInterpreter[Writes, Type, Collection, UnderlyingInterpreter] {
+  implicit def manyWritesInterpreter[Type, Collection[A] <: Iterable[A], UnderlyingInterpreter <: Interpreter[Writes, Type]](implicit original: UnderlyingInterpreter): ManyInterpreter[Writes, Type, Collection, UnderlyingInterpreter] = new ManyInterpreter[Writes, Type, Collection, UnderlyingInterpreter] {
     override def originalInterpreter: UnderlyingInterpreter = original
 
     override def many(schema: Writes[Type]): Writes[Collection[Type]] = Writes.traversableWrites(schema)
   }
 
-  implicit def requiredWritesInterpreter[Type, P <: Path, UnderlyingInterpreter <: Interpreter[Writes, Type]](implicit pathBuilder: PathBuilder[P], interpreter: UnderlyingInterpreter): RequiredInterpreter[Writes, P, Type, UnderlyingInterpreter] = new RequiredInterpreter[Writes, P, Type, UnderlyingInterpreter] {
+  implicit def requiredWritesInterpreter[P <: Path, Type, UnderlyingInterpreter <: Interpreter[Writes, Type]](implicit pathBuilder: WritesPathBuilder[P], interpreter: UnderlyingInterpreter): RequiredInterpreter[Writes, P, Type, UnderlyingInterpreter] = new RequiredInterpreter[Writes, P, Type, UnderlyingInterpreter] {
     override def originalInterpreter: UnderlyingInterpreter = interpreter
 
     override def required(path: P, schema: Writes[Type], default: Option[Type]): Writes[Type] =
       pathBuilder.toJsPath(path).write(schema)
   }
 
-  implicit def optionalWritesInterpreter[Type, P <: Path, UnderlyingInterpreter <: Interpreter[Writes, Type]](implicit original: UnderlyingInterpreter, pathBuilder: PathBuilder[P]): OptionalInterpreter[Writes, P, Type, UnderlyingInterpreter] = new OptionalInterpreter[Writes, P, Type, UnderlyingInterpreter] {
+  implicit def optionalWritesInterpreter[Type, P <: Path, UnderlyingInterpreter <: Interpreter[Writes, Type]](implicit original: UnderlyingInterpreter, pathBuilder: WritesPathBuilder[P]): OptionalInterpreter[Writes, P, Type, UnderlyingInterpreter] = new OptionalInterpreter[Writes, P, Type, UnderlyingInterpreter] {
     override def originalInterpreter: UnderlyingInterpreter = original
 
     override def optional(path: P, schema: Writes[Type], default: Option[Option[Type]]): Writes[Option[Type]] =
@@ -129,16 +129,16 @@ object json {
       }
   }
 
-  trait PathBuilder[P <: Path] {
+  trait WritesPathBuilder[P <: Path] {
     def toJsPath(path: P): JsPath
   }
 
-  object PathBuilder {
-    implicit def stringStep2JsPath[RemainingPath <: Path](implicit remainingPath: PathBuilder[RemainingPath]) = new PathBuilder[RemainingPath \ String] {
+  object WritesPathBuilder {
+    implicit def stringStep2JsPath[RemainingPath <: Path](implicit remainingPath: WritesPathBuilder[RemainingPath]) = new WritesPathBuilder[RemainingPath \ String] {
       override def toJsPath(path: RemainingPath \ String): JsPath = JsPath(remainingPath.toJsPath(path.previousSteps).path :+ KeyPathNode(path.step))
     }
 
-    implicit def emptyStep2JsPath: PathBuilder[PathNil] = (_: PathNil) => JsPath(List.empty)
+    implicit def emptyStep2JsPath: WritesPathBuilder[PathNil] = (_: PathNil) => JsPath(List.empty)
   }
 
 }

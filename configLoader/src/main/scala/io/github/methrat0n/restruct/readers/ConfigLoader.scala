@@ -2,7 +2,7 @@ package io.github.methrat0n.restruct.readers
 
 import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 
-import com.typesafe.config.Config
+import com.typesafe.config._
 import io.github.methrat0n.restruct.constraints.Constraint
 import io.github.methrat0n.restruct.schema.Interpreter._
 import io.github.methrat0n.restruct.schema.Path.\
@@ -79,10 +79,12 @@ trait MiddlePriority extends LowPriority {
     override def originalInterpreter: UnderlyingInterpreter = algebra
 
     override def optional(path: P, schema: ConfigLoader[T], default: Option[Option[T]]): ConfigLoader[Option[T]] =
-      (config: Config, configPath: String) => {
-        val completePath = s"$configPath.${pathBuilder.toConfigPath(path)}"
-        Configuration(config).getOptional[T](completePath)(schema) orElse default.flatten
-      }
+      (config: Config, configPath: String) =>
+        pathBuilder.toConfigPath(path, config)
+          .map(_.atPath(configPath))
+          .map(Configuration.apply)
+          .flatMap(_.getOptional(configPath)(schema))
+          .orElse(default.flatten)
   }
 
   implicit def semiGroupalReadInterpreter[A, B, AInterpreter <: Interpreter[ConfigLoader, A], BInterpreter <: Interpreter[ConfigLoader, B]](implicit algebraA: AInterpreter, algebraB: BInterpreter): SemiGroupalInterpreter[ConfigLoader, A, B, AInterpreter, BInterpreter] = new SemiGroupalInterpreter[ConfigLoader, A, B, AInterpreter, BInterpreter] {
@@ -137,12 +139,13 @@ trait LowPriority extends FinalPriority {
   implicit def requiredReadInterpreter[P <: Path, T, UnderlyingInterpreter <: Interpreter[ConfigLoader, T]](implicit pathBuilder: PathBuilder[P], interpreter: UnderlyingInterpreter): RequiredInterpreter[ConfigLoader, P, T, UnderlyingInterpreter] = new RequiredInterpreter[ConfigLoader, P, T, UnderlyingInterpreter] {
     override def originalInterpreter: UnderlyingInterpreter = interpreter
 
-    override def required(path: P, schema: ConfigLoader[T], default: Option[T]): ConfigLoader[T] = (config: Config, configPath: String) => {
-      val completePath = s"$configPath.${pathBuilder.toConfigPath(path)}"
-      val configuration = Configuration(config)
-      default.map(dft => configuration.getOptional[T](completePath)(schema).getOrElse(dft))
-        .getOrElse(configuration.get[T](completePath)(schema))
-    }
+    override def required(path: P, schema: ConfigLoader[T], default: Option[T]): ConfigLoader[T] = (config: Config, configPath: String) =>
+      pathBuilder.toConfigPath(path, config.getConfig(configPath))
+        .map(_.atPath(""))
+        .map(Configuration.apply)
+        .flatMap(_.getOptional[T]("")(schema))
+        .orElse(default)
+        .get //TODO
   }
 }
 
@@ -160,14 +163,20 @@ trait FinalPriority {
 }
 
 trait PathBuilder[P <: Path] {
-  def toConfigPath(path: P): String
+  def toConfigPath(path: P, config: Config): Option[ConfigValue]
 }
 
 object PathBuilder {
   implicit def stringStep2JsPath[RemainingPath <: Path](implicit remainingPath: PathBuilder[RemainingPath]): PathBuilder[RemainingPath \ String] =
-    (path: RemainingPath \ String) => s"${remainingPath.toConfigPath(path.previousSteps)}.${path.step}"
+    (path: RemainingPath \ String, config: Config) => remainingPath.toConfigPath(path.previousSteps, config) match {
+      case obj: ConfigObject => Try { obj.get(path.step) }.toOption
+      case _                 => throw new ConfigException.BadPath(path.step, "string") //TODO
+    }
   implicit def intStep2JsPath[RemainingPath <: Path](implicit remainingPath: PathBuilder[RemainingPath]): PathBuilder[RemainingPath \ Int] =
-    (path: RemainingPath \ Int) => s"${remainingPath.toConfigPath(path.previousSteps)}.${path.step}"
+    (path: RemainingPath \ Int, config: Config) => remainingPath.toConfigPath(path.previousSteps, config) match {
+      case list: ConfigList => Try { list.get(path.step) }.toOption
+      case _                => throw new ConfigException.BadPath(path.step.toString, "int") //TODO
+    }
   implicit def emptyStep2JsPath: PathBuilder[PathNil] =
-    (_: PathNil) => ""
+    (_: PathNil, config: Config) => Some(config.getObject(""))
 }
