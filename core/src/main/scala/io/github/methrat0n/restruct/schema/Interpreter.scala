@@ -5,7 +5,7 @@ import io.github.methrat0n.restruct.constraints.Constraint
 import scala.annotation.implicitNotFound
 import scala.collection.Iterable
 
-sealed trait Interpreter[Format[_], +Type]
+sealed trait Interpreter[+Format[_], +Type]
 
 object Interpreter {
 

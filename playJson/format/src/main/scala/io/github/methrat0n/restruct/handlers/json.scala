@@ -1,61 +1,111 @@
 package io.github.methrat0n.restruct.handlers
 
+import java.time.{LocalDate, LocalTime, ZonedDateTime}
+
 import io.github.methrat0n.restruct.constraints.Constraint
 import io.github.methrat0n.restruct.schema.Interpreter._
-import io.github.methrat0n.restruct.schema.{ Interpreter, Path }
-import play.api.libs.json.{ Format, Reads, Writes }
+import io.github.methrat0n.restruct.schema.{Interpreter, Path}
+import play.api.libs.json.{Format, Reads, Writes}
+import io.github.methrat0n.restruct.readers.json._
+import io.github.methrat0n.restruct.writers.json._
 
-object json {
+import language.higherKinds
+import scala.collection.Factory
 
-  import io.github.methrat0n.restruct.readers.json._
-  import io.github.methrat0n.restruct.writers.json._
+object json extends MiddlePriority {
 
-  implicit def simpleFormatInterpreter[A <: AnyVal](implicit reader: SimpleInterpreter[Reads, A], writer: SimpleInterpreter[Writes, A]): SimpleInterpreter[Format, A] = new SimpleInterpreter[Format, A] {
-    override def schema: Format[A] = Format(reader.schema, writer.schema)
+  implicit val charFormatInterpreter: SimpleInterpreter[Format, Char] = new SimpleInterpreter[Format, Char] {
+    override def schema: Format[Char] = Format(charReadInterpreter.schema, charWritesInterpreter.schema)
+  }
+
+  implicit val byteFormatInterpreter: SimpleInterpreter[Format, Byte] = new SimpleInterpreter[Format, Byte] {
+    override def schema: Format[Byte] = Format(byteReadInterpreter.schema, byteWritesInterpreter.schema)
+  }
+
+  implicit val shortFormatInterpreter: SimpleInterpreter[Format, Short] = new SimpleInterpreter[Format, Short] {
+    override def schema: Format[Short] = Format(shortReadInterpreter.schema, shortWritesInterpreter.schema)
+  }
+
+  implicit val floatFormatInterpreter: SimpleInterpreter[Format, Float] = new SimpleInterpreter[Format, Float] {
+    override def schema: Format[Float] = Format(floatReadInterpreter.schema, floatWritesInterpreter.schema)
+  }
+
+  implicit val decimalFormatInterpreter: SimpleInterpreter[Format, Double] = new SimpleInterpreter[Format, Double] {
+    override def schema: Format[Double] = Format(decimalReadInterpreter.schema, decimalWritesInterpreter.schema)
+  }
+
+  implicit val bigDecimalFormatInterpreter: SimpleInterpreter[Format, BigDecimal] = new SimpleInterpreter[Format, BigDecimal] {
+    override def schema: Format[BigDecimal] = Format(bigDecimalReadInterpreter.schema, bigDecimalWritesInterpreter.schema)
+  }
+
+  implicit val integerFormatInterpreter: SimpleInterpreter[Format, Int] = new SimpleInterpreter[Format, Int] {
+    override def schema: Format[Int] = Format(integerReadInterpreter.schema, integerWritesInterpreter.schema)
+  }
+
+  implicit val longFormatInterpreter: SimpleInterpreter[Format, Long] = new SimpleInterpreter[Format, Long] {
+    override def schema: Format[Long] = Format(longReadInterpreter.schema, longWritesInterpreter.schema)
+  }
+
+  implicit val bigIntFormatInterpreter: SimpleInterpreter[Format, BigInt] = new SimpleInterpreter[Format, BigInt] {
+    override def schema: Format[BigInt] = Format(bigIntReadInterpreter.schema, bigIntWritesInterpreter.schema)
+  }
+
+  implicit val booleanFormatInterpreter: SimpleInterpreter[Format, Boolean] = new SimpleInterpreter[Format, Boolean] {
+    override def schema: Format[Boolean] = Format(booleanReadInterpreter.schema, booleanWritesInterpreter.schema)
   }
 
   implicit val stringFormatInterpreter: SimpleInterpreter[Format, String] = new SimpleInterpreter[Format, String] {
     override def schema: Format[String] = Format(stringReadInterpreter.schema, stringWritesInterpreter.schema)
   }
+
+  implicit val dateTimeFormatInterpreter: SimpleInterpreter[Format, ZonedDateTime] = new SimpleInterpreter[Format, ZonedDateTime] {
+    override def schema: Format[ZonedDateTime] = Format(dateTimeReadInterpreter.schema, dateTimeWritesInterpreter.schema)
+  }
+
+  implicit val timeFormatInterpreter: SimpleInterpreter[Format, LocalTime] = new SimpleInterpreter[Format, LocalTime] {
+    override def schema: Format[LocalTime] = Format(timeReadInterpreter.schema, timeWritesInterpreter.schema)
+  }
+
+  implicit val dateFormatInterpreter: SimpleInterpreter[Format, LocalDate] = new SimpleInterpreter[Format, LocalDate] {
+    override def schema: Format[LocalDate] = Format(dateReadInterpreter.schema, dateWritesInterpreter.schema)
+  }
+
 }
 
 trait MiddlePriority extends LowPriority {
-  import language.higherKinds
-  implicit def manyReadInterpreter[T, Collection[A] <: Iterable[A], UnderlyingInterpreter <: Interpreter[Format, T]](implicit
+
+  implicit def manyFormatInterpreter[T, Collection[A] <: Iterable[A], UnderlyingInterpreter <: Interpreter[Format, T]](implicit
     algebra: UnderlyingInterpreter,
-    reader: ManyInterpreter[Reads, T, Collection, UnderlyingInterpreter],
-    writer: ManyInterpreter[Writes, T, Collection, UnderlyingInterpreter]
+    factory: Factory[T, Collection[T]]
   ): ManyInterpreter[Format, T, Collection, UnderlyingInterpreter] =
     new ManyInterpreter[Format, T, Collection, UnderlyingInterpreter] {
       override def originalInterpreter: UnderlyingInterpreter = algebra
 
       override def many(schema: Format[T]): Format[Collection[T]] =
         Format(
-          reader.many(schema),
-          writer.many(schema)
+          manyReadInterpreter[T, Collection, Interpreter[Reads, T]].many(schema),
+          manyWritesInterpreter[T, Collection, Interpreter[Writes, T]].many(schema)
         )
     }
 
-  implicit def optionalReadInterpreter[T, P <: Path, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit
+  implicit def optionalFormatInterpreter[T, P <: Path, UnderlyingInterpreter <: Interpreter[Format, T]](implicit
     algebra: UnderlyingInterpreter,
-    reader: OptionalInterpreter[Reads, P, T, UnderlyingInterpreter],
-    writer: OptionalInterpreter[Writes, P, T, UnderlyingInterpreter]
+    readsPathBuilder: ReadsPathBuilder[P],
+    writesPathBuilder: WritesPathBuilder[P],
   ): OptionalInterpreter[Format, P, T, UnderlyingInterpreter] =
     new OptionalInterpreter[Format, P, T, UnderlyingInterpreter] {
       override def originalInterpreter: UnderlyingInterpreter = algebra
 
       override def optional(path: P, schema: Format[T], default: Option[Option[T]]): Format[Option[T]] =
         Format(
-          reader.optional(path, schema, default),
-          writer.optional(path, schema, default)
+          optionalReadInterpreter[T, P, UnderlyingInterpreter].optional(path, schema, default),
+          optionalWritesInterpreter[T, P, UnderlyingInterpreter].optional(path, schema, default)
         )
     }
 
-  implicit def semiGroupalReadInterpreter[A, B, AInterpreter <: Interpreter[Reads, A], BInterpreter <: Interpreter[Reads, B]](implicit
+  implicit def semiGroupalFormatInterpreter[A, B, AInterpreter <: Interpreter[Format, A], BInterpreter <: Interpreter[Format, B]](implicit
     algebraA: AInterpreter,
-    algebraB: BInterpreter,
-    reader: SemiGroupalInterpreter[Reads, A, B, AInterpreter, BInterpreter],
-    writer: SemiGroupalInterpreter[Writes, A, B, AInterpreter, BInterpreter]
+    algebraB: BInterpreter
   ): SemiGroupalInterpreter[Format, A, B, AInterpreter, BInterpreter] =
     new SemiGroupalInterpreter[Format, A, B, AInterpreter, BInterpreter] {
       override def originalInterpreterA: AInterpreter = algebraA
@@ -64,16 +114,14 @@ trait MiddlePriority extends LowPriority {
 
       override def product(fa: Format[A], fb: Format[B]): Format[(A, B)] =
         Format(
-          reader.product(fa, fb),
-          writer.product(fa, fb)
+          semiGroupalReadInterpreter[A, B, AInterpreter, BInterpreter].product(fa, fb),
+          semiGroupalWritesInterpreter[A, B, AInterpreter, BInterpreter].product(fa, fb)
         )
     }
 
-  implicit def oneOfReadInterpreter[A, B, AInterpreter <: Interpreter[Reads, A], BInterpreter <: Interpreter[Reads, B]](implicit
+  implicit def oneOfFormatInterpreter[A, B, AInterpreter <: Interpreter[Format, A], BInterpreter <: Interpreter[Format, B]](implicit
     algebraA: AInterpreter,
-    algebraB: BInterpreter,
-    reader: OneOfInterpreter[Reads, A, B, AInterpreter, BInterpreter],
-    writer: OneOfInterpreter[Writes, A, B, AInterpreter, BInterpreter]
+    algebraB: BInterpreter
   ): OneOfInterpreter[Format, A, B, AInterpreter, BInterpreter] =
     new OneOfInterpreter[Format, A, B, AInterpreter, BInterpreter] {
       override def originalInterpreterA: AInterpreter = algebraA
@@ -93,58 +141,50 @@ trait MiddlePriority extends LowPriority {
        */
       override def or(fa: Format[A], fb: Format[B]): Format[Either[A, B]] =
         Format(
-          reader.or(fa, fb),
-          writer.or(fa, fb)
+          oneOfReadInterpreter[A, B, AInterpreter, BInterpreter].or(fa, fb),
+          oneOfWritesInterpreter[A, B, AInterpreter, BInterpreter].or(fa, fb)
         )
     }
 }
 
 trait LowPriority extends FinalPriority {
 
-  implicit def invariantReadInterpreter[A, B, UnderlyingInterpreter <: Interpreter[Reads, A]](implicit
-    underlying: UnderlyingInterpreter,
-    reader: InvariantInterpreter[Reads, A, B, UnderlyingInterpreter],
-    writer: InvariantInterpreter[Writes, A, B, UnderlyingInterpreter]
-  ): InvariantInterpreter[Format, A, B, UnderlyingInterpreter] =
+  implicit def invariantFormatInterpreter[A, B, UnderlyingInterpreter <: Interpreter[Format, A]](implicit underlying: UnderlyingInterpreter): InvariantInterpreter[Format, A, B, UnderlyingInterpreter] =
     new InvariantInterpreter[Format, A, B, UnderlyingInterpreter] {
       override def underlyingInterpreter: UnderlyingInterpreter = underlying
 
       override def imap(fa: Format[A])(f: A => B)(g: B => A): Format[B] =
         Format(
-          reader.imap(fa)(f)(g),
-          writer.imap(fa)(f)(g)
+          invariantReadInterpreter[A, B, UnderlyingInterpreter].imap(fa)(f)(g),
+          invariantWritesInterpreter[A, B, UnderlyingInterpreter].imap(fa)(f)(g)
         )
     }
 
-  implicit def requiredReadInterpreter[P <: Path, T, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit
+  implicit def requiredFormatInterpreter[P <: Path, T, UnderlyingInterpreter <: Interpreter[Format, T]](implicit
     interpreter: UnderlyingInterpreter,
-    reader: RequiredInterpreter[Reads, P, T, UnderlyingInterpreter],
-    writer: RequiredInterpreter[Writes, P, T, UnderlyingInterpreter]
+    readsPathBuilder: ReadsPathBuilder[P],
+    writesPathBuilder: WritesPathBuilder[P]
   ): RequiredInterpreter[Format, P, T, UnderlyingInterpreter] =
     new RequiredInterpreter[Format, P, T, UnderlyingInterpreter] {
       override def originalInterpreter: UnderlyingInterpreter = interpreter
 
       override def required(path: P, schema: Format[T], default: Option[T]): Format[T] =
         Format(
-          reader.required(path, schema, default),
-          writer.required(path, schema, default)
+          requiredReadInterpreter[P, T, UnderlyingInterpreter].required(path, schema, default),
+          requiredWritesInterpreter[P, T, UnderlyingInterpreter].required(path, schema, default)
         )
     }
 }
 
 trait FinalPriority {
-  implicit def constrainedReadInterpreter[T, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit
-    algebra: UnderlyingInterpreter,
-    reader: ConstrainedInterpreter[Reads, T, UnderlyingInterpreter],
-    writer: ConstrainedInterpreter[Writes, T, UnderlyingInterpreter]
-  ): ConstrainedInterpreter[Format, T, UnderlyingInterpreter] =
+  implicit def constrainedFormatInterpreter[T, UnderlyingInterpreter <: Interpreter[Format, T]](implicit algebra: UnderlyingInterpreter): ConstrainedInterpreter[Format, T, UnderlyingInterpreter] =
     new ConstrainedInterpreter[Format, T, UnderlyingInterpreter] {
       override def originalInterpreter: UnderlyingInterpreter = algebra
 
       override def verifying(schema: Format[T], constraint: Constraint[T]): Format[T] =
         Format(
-          reader.verifying(schema, constraint),
-          writer.verifying(schema, constraint)
+          constrainedReadInterpreter[T, UnderlyingInterpreter].verifying(schema, constraint),
+          constrainedWritesInterpreter[T, UnderlyingInterpreter].verifying(schema, constraint)
         )
     }
 }

@@ -7,7 +7,7 @@ import io.github.methrat0n.restruct.schema.Interpreter.{ ConstrainedInterpreter,
 import scala.language.higherKinds
 
 /**
- * In the companion object of your Enumeration you can use this helper to define the Schema of the Enumeration.
+ * In the companion object of your enumeration you can use this helper to define the Schema of the Enumeration.
  *
  * {{{
  *   import io.github.methrat0n.restruct.schema.EnumeratumSchema
