@@ -12,7 +12,7 @@ import io.github.methrat0n.restruct.writers.json._
 import language.higherKinds
 import scala.collection.Factory
 
-object json extends MiddlePriority {
+object json extends FormatMiddlePriority {
 
   implicit val charFormatInterpreter: SimpleInterpreter[Format, Char] = new SimpleInterpreter[Format, Char] {
     override def schema: Format[Char] = Format(charReadInterpreter.schema, charWritesInterpreter.schema)
@@ -72,7 +72,7 @@ object json extends MiddlePriority {
 
 }
 
-trait MiddlePriority extends LowPriority {
+trait FormatMiddlePriority extends FormatLowPriority {
 
   implicit def manyFormatInterpreter[T, Collection[A] <: Iterable[A], UnderlyingInterpreter <: Interpreter[Format, T]](implicit
     algebra: UnderlyingInterpreter,
@@ -147,7 +147,7 @@ trait MiddlePriority extends LowPriority {
     }
 }
 
-trait LowPriority extends FinalPriority {
+trait FormatLowPriority extends FormatFinalPriority {
 
   implicit def invariantFormatInterpreter[A, B, UnderlyingInterpreter <: Interpreter[Format, A]](implicit underlying: UnderlyingInterpreter): InvariantInterpreter[Format, A, B, UnderlyingInterpreter] =
     new InvariantInterpreter[Format, A, B, UnderlyingInterpreter] {
@@ -176,7 +176,7 @@ trait LowPriority extends FinalPriority {
     }
 }
 
-trait FinalPriority {
+trait FormatFinalPriority {
   implicit def constrainedFormatInterpreter[T, UnderlyingInterpreter <: Interpreter[Format, T]](implicit algebra: UnderlyingInterpreter): ConstrainedInterpreter[Format, T, UnderlyingInterpreter] =
     new ConstrainedInterpreter[Format, T, UnderlyingInterpreter] {
       override def originalInterpreter: UnderlyingInterpreter = algebra

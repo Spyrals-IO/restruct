@@ -1,7 +1,8 @@
 package restruct.examples
 
 import io.github.methrat0n.restruct.schema.Path
-import play.api.libs.json.{ Format, Reads }
+import play.api.libs.json.{Format, JsSuccess, Json, Reads, Writes}
+import play.api.mvc.QueryStringBindable
 
 object SyntaxExample extends App {
 
@@ -29,38 +30,40 @@ object SyntaxExample extends App {
       |  "__type": "Badser"
       |}
     """.stripMargin
-  /*GoodUser.schema.bind[Format].reads(Json.parse(goodUserJson)) match {
+  import io.github.methrat0n.restruct.handlers.json._
+
+  GoodUser.schema.bind[Format].reads(Json.parse(goodUserJson)) match {
     case play.api.libs.json.JsSuccess(value, _) => println(value)
     case play.api.libs.json.JsError(errors)     => println(errors)
-  }*/
+  }
 
-  /*import io.github.methrat0n.restruct.handlers.json._
-  (Path \ "name").as[String]().bind[Format].reads(JsString("yololo")) match {
-    case play.api.libs.json.JsSuccess(value, _) => println(value)
-    case play.api.libs.json.JsError(errors)     => println(errors)
-  }*/
+  import io.github.methrat0n.restruct.writers.json._
+  val user = GoodUser("charlaine", 32)
+  println(Json.stringify(GoodUser.schema.bind[Writes].writes(user)))
 
-  //import io.github.methrat0n.restruct.writers.json._
-  //val user = GoodUser("charlaine", "32")
-  //println(Json.stringify(GoodUser.schema.bind[Format].writes(user)))
-
-  //println(Json.parse(s"""{"user": [$goodUserJson, $goodUserJson, $goodUserJson], "text":"qqzdd"}""").as[WrappedUser])
-  /*BadUser.schema.bind[Reads].reads(Json.parse(goodUserJson)) match {
+  import io.github.methrat0n.restruct.readers.json._
+  println(Json.parse(s"""{"user": [$goodUserJson, $goodUserJson, $goodUserJson], "text":"qqzdd"}""").as[WrappedUser])
+  BadUser.schema.bind[Reads].reads(Json.parse(goodUserJson)) match {
     case JsSuccess(value, _)                => println(value)
     case play.api.libs.json.JsError(errors) => println(errors)
-  }*/
+  }
+
+  User.schema.bind[Format].reads(Json.parse(goodUserJson)) match {
+    case JsSuccess(value, _)                => println(value)
+    case play.api.libs.json.JsError(errors) => println(errors)
+  }
 }
 
 sealed trait User extends Product with Serializable
 
-final case class GoodUser(name: String, age: String) extends User
+final case class GoodUser(name: String, age: Int) extends User
 
 import scala.language.postfixOps
 
 object GoodUser {
   implicit val schema = (
     (Path \ "name").as[String]() and
-    (Path \ "age").as[String]()
+    (Path \ "age").as[Int]()
   ).inmap(GoodUser.apply _ tupled)(GoodUser.unapply _ andThen (_.get))
 
   implicit val reads: Reads[GoodUser] = {
@@ -68,24 +71,17 @@ object GoodUser {
     schema.bind[Reads]
   }
 
-  /*implicit val queryStringBindable: QueryStringBindable[GoodUser] = {
+  implicit val queryStringBindable: QueryStringBindable[GoodUser] = {
     import io.github.methrat0n.restruct.handlers.queryStringBindable._
-    GoodUser.schema.bind[QueryStringBindable](
-      invariantQueryStringBindableInterpreter(
-        semiGroupalQueryStringBindableInterpreter(
-          requiredQueryStringBindableInterpreter(Schema.simpleString),
-          requiredQueryStringBindableInterpreter(Schema.simpleString)
-        )
-      )
-    )
-  }*/
+    GoodUser.schema.bind[QueryStringBindable]
+  }
 }
 
-final case class BadUser(name: List[String], age: Int) extends User
+final case class BadUser(name: String, age: Int) extends User
 
 object BadUser {
   implicit val schema =
-    ((Path \ "name").many[String, List]() and
+    ((Path \ "name").as[String]() and
       (Path \ "age").as[Int]()).inmap(BadUser.apply _ tupled)(BadUser.unapply _ andThen (_.get))
 
   implicit val reads: Reads[BadUser] = {

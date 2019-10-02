@@ -9,9 +9,10 @@ import io.github.methrat0n.restruct.schema.Path.\
 import io.github.methrat0n.restruct.schema._
 import play.api.libs.json._
 
+import language.higherKinds
 import scala.collection.Factory
 
-object json extends MiddlePriority {
+object json extends ReadsMiddlePriority {
   implicit val charReadInterpreter: SimpleInterpreter[Reads, Char] = new SimpleInterpreter[Reads, Char] {
     override def schema: Reads[Char] = {
       case JsString(string) if string.length == 1 => JsSuccess(string.charAt(0))
@@ -99,8 +100,8 @@ object json extends MiddlePriority {
   }
 }
 
-trait MiddlePriority extends LowPriority {
-  import language.higherKinds
+trait ReadsMiddlePriority extends ReadsLowPriority {
+
   implicit def manyReadInterpreter[T, Collection[A] <: Iterable[A], UnderlyingInterpreter <: Interpreter[Reads, T]](implicit algebra: UnderlyingInterpreter, factory: Factory[T, Collection[T]]): ManyInterpreter[Reads, T, Collection, UnderlyingInterpreter] = new ManyInterpreter[Reads, T, Collection, UnderlyingInterpreter] {
     override def originalInterpreter: UnderlyingInterpreter = algebra
 
@@ -151,7 +152,7 @@ trait MiddlePriority extends LowPriority {
   }
 }
 
-trait LowPriority extends FinalPriority {
+trait ReadsLowPriority extends ReadsFinalPriority {
 
   implicit def invariantReadInterpreter[A, B, UnderlyingInterpreter <: Interpreter[Reads, A]](implicit underlying: UnderlyingInterpreter): InvariantInterpreter[Reads, A, B, UnderlyingInterpreter] = new InvariantInterpreter[Reads, A, B, UnderlyingInterpreter] {
     override def underlyingInterpreter: UnderlyingInterpreter = underlying
@@ -168,7 +169,7 @@ trait LowPriority extends FinalPriority {
   }
 }
 
-trait FinalPriority {
+trait ReadsFinalPriority {
   implicit def constrainedReadInterpreter[T, UnderlyingInterpreter <: Interpreter[Reads, T]](implicit algebra: UnderlyingInterpreter): ConstrainedInterpreter[Reads, T, UnderlyingInterpreter] = new ConstrainedInterpreter[Reads, T, UnderlyingInterpreter] {
     override def originalInterpreter: UnderlyingInterpreter = algebra
 
