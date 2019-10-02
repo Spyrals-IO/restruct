@@ -6,9 +6,13 @@ import io.github.methrat0n.restruct.constraints.Constraint
 import io.github.methrat0n.restruct.schema.Interpreter._
 import io.github.methrat0n.restruct.schema.Path.\
 import io.github.methrat0n.restruct.schema._
+import io.github.methrat0n.restruct.writers.json.WritesPathBuilder
 import play.api.libs.json._
 
-object json {
+import language.higherKinds
+
+object json extends WritesMiddlePriority {
+
   implicit val stringWritesInterpreter: SimpleInterpreter[Writes, String] = new SimpleInterpreter[Writes, String] {
     override def schema: Writes[String] = Writes.StringWrites
   }
@@ -52,18 +56,26 @@ object json {
     override def schema: Writes[LocalDate] = Writes.DefaultLocalDateWrites
   }
 
-  import language.higherKinds
+  trait WritesPathBuilder[P <: Path] {
+    def toJsPath(path: P): JsPath
+  }
+
+  object WritesPathBuilder {
+    implicit def stringStep2JsPath[RemainingPath <: Path](implicit remainingPath: WritesPathBuilder[RemainingPath]) = new WritesPathBuilder[RemainingPath \ String] {
+      override def toJsPath(path: RemainingPath \ String): JsPath = JsPath(remainingPath.toJsPath(path.previousSteps).path :+ KeyPathNode(path.step))
+    }
+
+    implicit def emptyStep2JsPath: WritesPathBuilder[PathNil] = (_: PathNil) => JsPath(List.empty)
+  }
+
+}
+
+trait WritesMiddlePriority extends WritesLowPriority {
+
   implicit def manyWritesInterpreter[Type, Collection[A] <: Iterable[A], UnderlyingInterpreter <: Interpreter[Writes, Type]](implicit original: UnderlyingInterpreter): ManyInterpreter[Writes, Type, Collection, UnderlyingInterpreter] = new ManyInterpreter[Writes, Type, Collection, UnderlyingInterpreter] {
     override def originalInterpreter: UnderlyingInterpreter = original
 
     override def many(schema: Writes[Type]): Writes[Collection[Type]] = Writes.traversableWrites(schema)
-  }
-
-  implicit def requiredWritesInterpreter[P <: Path, Type, UnderlyingInterpreter <: Interpreter[Writes, Type]](implicit pathBuilder: WritesPathBuilder[P], interpreter: UnderlyingInterpreter): RequiredInterpreter[Writes, P, Type, UnderlyingInterpreter] = new RequiredInterpreter[Writes, P, Type, UnderlyingInterpreter] {
-    override def originalInterpreter: UnderlyingInterpreter = interpreter
-
-    override def required(path: P, schema: Writes[Type], default: Option[Type]): Writes[Type] =
-      pathBuilder.toJsPath(path).write(schema)
   }
 
   implicit def optionalWritesInterpreter[Type, P <: Path, UnderlyingInterpreter <: Interpreter[Writes, Type]](implicit original: UnderlyingInterpreter, pathBuilder: WritesPathBuilder[P]): OptionalInterpreter[Writes, P, Type, UnderlyingInterpreter] = new OptionalInterpreter[Writes, P, Type, UnderlyingInterpreter] {
@@ -71,20 +83,6 @@ object json {
 
     override def optional(path: P, schema: Writes[Type], default: Option[Option[Type]]): Writes[Option[Type]] =
       pathBuilder.toJsPath(path).writeNullable(schema)
-  }
-
-  implicit def constrainedWritesInterpreter[Type, UnderlyingInterpreter <: Interpreter[Writes, Type]](implicit interpreter: UnderlyingInterpreter): ConstrainedInterpreter[Writes, Type, UnderlyingInterpreter] = new ConstrainedInterpreter[Writes, Type, UnderlyingInterpreter] {
-    override def originalInterpreter: UnderlyingInterpreter = interpreter
-
-    override def verifying(schema: Writes[Type], constraint: Constraint[Type]): Writes[Type] =
-      schema
-  }
-
-  implicit def invariantWritesInterpreter[A, B, AInterpreter <: Interpreter[Writes, A]](implicit interpreterA: AInterpreter): InvariantInterpreter[Writes, A, B, AInterpreter] = new InvariantInterpreter[Writes, A, B, AInterpreter] {
-    override def underlyingInterpreter: AInterpreter = interpreterA
-
-    override def imap(fa: Writes[A])(f: A => B)(g: B => A): Writes[B] =
-      fa.contramap(g)
   }
 
   implicit def semiGroupalWritesInterpreter[A, B, AInterpreter <: Interpreter[Writes, A], BInterpreter <: Interpreter[Writes, B]](implicit
@@ -129,16 +127,33 @@ object json {
       }
   }
 
-  trait WritesPathBuilder[P <: Path] {
-    def toJsPath(path: P): JsPath
+}
+
+trait WritesLowPriority extends WritesFinalPriority {
+
+  implicit def requiredWritesInterpreter[P <: Path, Type, UnderlyingInterpreter <: Interpreter[Writes, Type]](implicit pathBuilder: WritesPathBuilder[P], interpreter: UnderlyingInterpreter): RequiredInterpreter[Writes, P, Type, UnderlyingInterpreter] = new RequiredInterpreter[Writes, P, Type, UnderlyingInterpreter] {
+    override def originalInterpreter: UnderlyingInterpreter = interpreter
+
+    override def required(path: P, schema: Writes[Type], default: Option[Type]): Writes[Type] =
+      pathBuilder.toJsPath(path).write(schema)
   }
 
-  object WritesPathBuilder {
-    implicit def stringStep2JsPath[RemainingPath <: Path](implicit remainingPath: WritesPathBuilder[RemainingPath]) = new WritesPathBuilder[RemainingPath \ String] {
-      override def toJsPath(path: RemainingPath \ String): JsPath = JsPath(remainingPath.toJsPath(path.previousSteps).path :+ KeyPathNode(path.step))
-    }
+  implicit def invariantWritesInterpreter[A, B, AInterpreter <: Interpreter[Writes, A]](implicit interpreterA: AInterpreter): InvariantInterpreter[Writes, A, B, AInterpreter] = new InvariantInterpreter[Writes, A, B, AInterpreter] {
+    override def underlyingInterpreter: AInterpreter = interpreterA
 
-    implicit def emptyStep2JsPath: WritesPathBuilder[PathNil] = (_: PathNil) => JsPath(List.empty)
+    override def imap(fa: Writes[A])(f: A => B)(g: B => A): Writes[B] =
+      fa.contramap(g)
+  }
+
+}
+
+trait WritesFinalPriority {
+
+  implicit def constrainedWritesInterpreter[Type, UnderlyingInterpreter <: Interpreter[Writes, Type]](implicit interpreter: UnderlyingInterpreter): ConstrainedInterpreter[Writes, Type, UnderlyingInterpreter] = new ConstrainedInterpreter[Writes, Type, UnderlyingInterpreter] {
+    override def originalInterpreter: UnderlyingInterpreter = interpreter
+
+    override def verifying(schema: Writes[Type], constraint: Constraint[Type]): Writes[Type] =
+      schema
   }
 
 }

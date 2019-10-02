@@ -13,7 +13,7 @@ import scala.util.Try
 
 import language.higherKinds
 
-object queryStringBindable extends MiddlePriority {
+object queryStringBindable extends QueryStringBindableMiddlePriority {
 
   implicit val stringQueryStringBindableInterpreter: SimpleInterpreter[QueryStringBindable, String] = new SimpleInterpreter[QueryStringBindable, String] {
     override def schema: QueryStringBindable[String] = QueryStringBindable.bindableString
@@ -127,7 +127,7 @@ object queryStringBindable extends MiddlePriority {
 
 }
 
-trait MiddlePriority extends LowPriority {
+trait QueryStringBindableMiddlePriority extends QueryStringBindableLowPriority {
 
   implicit def manyQueryStringBindableInterpreter[Collection[A] <: Iterable[A], Type, UnderlyingInterpreter <: Interpreter[QueryStringBindable, Type]](implicit original: UnderlyingInterpreter, factory: Factory[Type, Collection[Type]]): ManyInterpreter[QueryStringBindable, Type, Collection, UnderlyingInterpreter] = new ManyInterpreter[QueryStringBindable, Type, Collection, UnderlyingInterpreter] {
     override def originalInterpreter: UnderlyingInterpreter = original
@@ -218,7 +218,7 @@ trait MiddlePriority extends LowPriority {
 
 }
 
-trait LowPriority extends FinalPriority {
+trait QueryStringBindableLowPriority extends QueryStringBindableFinalPriority {
 
   implicit def invariantQueryStringBindableInterpreter[A, B, AInterpreter <: Interpreter[QueryStringBindable, A]](implicit interpreterA: AInterpreter): InvariantInterpreter[QueryStringBindable, A, B, AInterpreter] = new InvariantInterpreter[QueryStringBindable, A, B, AInterpreter] {
     override def underlyingInterpreter: AInterpreter = interpreterA
@@ -248,7 +248,7 @@ trait LowPriority extends FinalPriority {
 
 }
 
-trait FinalPriority {
+trait QueryStringBindableFinalPriority {
 
   implicit def constrainedQueryStringBindableInterpreter[Type, UnderlyingInterpreter <: Interpreter[QueryStringBindable, Type]](implicit interpreter: UnderlyingInterpreter): ConstrainedInterpreter[QueryStringBindable, Type, UnderlyingInterpreter] = new ConstrainedInterpreter[QueryStringBindable, Type, UnderlyingInterpreter] {
     override def originalInterpreter: UnderlyingInterpreter = interpreter
