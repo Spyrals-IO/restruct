@@ -4,6 +4,7 @@ import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 
 import com.typesafe.config._
 import io.github.methrat0n.restruct.constraints.Constraint
+import io.github.methrat0n.restruct.readers.configLoader.PathBuilder
 import io.github.methrat0n.restruct.schema.Interpreter._
 import io.github.methrat0n.restruct.schema.Path.\
 import io.github.methrat0n.restruct.schema.{ Interpreter, NoMatchException, Path, PathNil }
@@ -15,7 +16,7 @@ import scala.util.{ Failure, Success, Try }
 /**
  * The errors are handle with exceptions to follow the ConfigLoader error handling.
  */
-object configLoader extends MiddlePriority {
+object configLoader extends ConfigLoaderMiddlePriority {
   implicit val charInterpreter: SimpleInterpreter[ConfigLoader, Char] = new SimpleInterpreter[ConfigLoader, Char] {
     override def schema: ConfigLoader[Char] = ConfigLoader.stringLoader.map(_.charAt(0))
   }
@@ -58,9 +59,45 @@ object configLoader extends MiddlePriority {
   implicit val dateReadInterpreter: SimpleInterpreter[ConfigLoader, LocalDate] = new SimpleInterpreter[ConfigLoader, LocalDate] {
     override def schema: ConfigLoader[LocalDate] = stringReadInterpreter.schema.map(LocalDate.parse)
   }
+
+  /**
+   * Read a config at `path` and return it. If a list is found, it's wrapped inside
+   * a config at key `__list`
+   */
+  private[readers] def readConfigOrConfigList(config: Config, path: String): Option[Config] =
+    Try {
+      config.getConfig(path)
+    }.orElse(Try {
+      config.getList(path).atKey("__list")
+    }).toOption
+
+  trait PathBuilder[P] {
+    def toConfigPath(path: P, config: Config): Option[ConfigValue]
+  }
+
+  object PathBuilder {
+    import io.github.methrat0n.restruct.schema.Path
+    implicit def lastStringStep2ConfigPath[RemainingPath](implicit pathBuilder: PathBuilder[PathNil \ RemainingPath]): PathBuilder[PathNil \ String \ RemainingPath] =
+      (path: PathNil \ String \ RemainingPath, config: Config) =>
+        readConfigOrConfigList(config, path.previousSteps.step).flatMap(conf => pathBuilder.toConfigPath(Path \ path.step, conf))
+    implicit def stringStep2ConfigPath: PathBuilder[PathNil \ String] =
+      (path: PathNil \ String, config: Config) =>
+        Try { config.getValue(path.step) }.toOption
+
+    implicit def lastIntStep2ConfigPath[RemainingPath](implicit pathBuilder: PathBuilder[PathNil \ RemainingPath]): PathBuilder[PathNil \ Int \ RemainingPath] =
+      (path: PathNil \ Int \ RemainingPath, config: Config) =>
+        Try { config.getConfigList("__list") }.toOption.flatMap(confs => {
+          val maybeConf = Try { confs.get(path.previousSteps.step) }.toOption
+          maybeConf.flatMap(pathBuilder.toConfigPath(Path \ path.step, _))
+        })
+    implicit def intStep2ConfigPath: PathBuilder[PathNil \ Int] =
+      (path: PathNil \ Int, config: Config) =>
+        Try { config.getList("__list") }.toOption.flatMap(conf =>
+          Try { conf.get(path.step) }.toOption)
+  }
 }
 
-trait MiddlePriority extends LowPriority {
+trait ConfigLoaderMiddlePriority extends ConfigLoaderLowPriority {
 
   import language.higherKinds
   import scala.jdk.CollectionConverters._
@@ -71,7 +108,7 @@ trait MiddlePriority extends LowPriority {
     override def many(schema: ConfigLoader[T]): ConfigLoader[Collection[T]] =
       (config: Config, configPath: String) =>
         config.getList(configPath).asScala
-          .map(value => schema.load(value.atPath("|||value|||"), "|||value|||"))
+          .map(value => schema.load(value.atPath("__value"), "__value"))
           .iterator.to[Collection[T]](factory)
   }
 
@@ -80,10 +117,10 @@ trait MiddlePriority extends LowPriority {
 
     override def optional(path: P, schema: ConfigLoader[T], default: Option[Option[T]]): ConfigLoader[Option[T]] =
       (config: Config, configPath: String) =>
-        pathBuilder.toConfigPath(path, config)
-          .map(_.atPath(configPath))
-          .map(Configuration.apply)
-          .flatMap(_.getOptional(configPath)(schema))
+        configLoader.readConfigOrConfigList(config, configPath)
+          .flatMap(pathBuilder.toConfigPath(path, _))
+          .map(_.atPath("__restruct"))
+          .map(schema.load(_, "__restruct"))
           .orElse(default.flatten)
   }
 
@@ -127,7 +164,7 @@ trait MiddlePriority extends LowPriority {
   }
 }
 
-trait LowPriority extends FinalPriority {
+trait ConfigLoaderLowPriority extends ConfigLoaderFinalPriority {
 
   implicit def invariantReadInterpreter[A, B, UnderlyingInterpreter <: Interpreter[ConfigLoader, A]](implicit underlying: UnderlyingInterpreter): InvariantInterpreter[ConfigLoader, A, B, UnderlyingInterpreter] = new InvariantInterpreter[ConfigLoader, A, B, UnderlyingInterpreter] {
     override def underlyingInterpreter: UnderlyingInterpreter = underlying
@@ -140,16 +177,18 @@ trait LowPriority extends FinalPriority {
     override def originalInterpreter: UnderlyingInterpreter = interpreter
 
     override def required(path: P, schema: ConfigLoader[T], default: Option[T]): ConfigLoader[T] = (config: Config, configPath: String) =>
-      pathBuilder.toConfigPath(path, config.getConfig(configPath))
-        .map(_.atPath(""))
-        .map(Configuration.apply)
-        .flatMap(_.getOptional[T]("")(schema))
+      pathBuilder.toConfigPath(
+        path,
+        configLoader.readConfigOrConfigList(config, configPath).get
+      )
+        .map(_.atPath("__restruct"))
+        .map(schema.load(_, "__restruct"))
         .orElse(default)
-        .get //TODO
+        .get //TODO clearer errors
   }
 }
 
-trait FinalPriority {
+trait ConfigLoaderFinalPriority {
   implicit def constrainedReadInterpreter[T, UnderlyingInterpreter <: Interpreter[ConfigLoader, T]](implicit algebra: UnderlyingInterpreter): ConstrainedInterpreter[ConfigLoader, T, UnderlyingInterpreter] = new ConstrainedInterpreter[ConfigLoader, T, UnderlyingInterpreter] {
     override def originalInterpreter: UnderlyingInterpreter = algebra
 
@@ -160,23 +199,4 @@ trait FinalPriority {
       else throw configuration.reportError(configPath, s"Constraint ${constraint.name} check failed for $value", None)
     }
   }
-}
-
-trait PathBuilder[P <: Path] {
-  def toConfigPath(path: P, config: Config): Option[ConfigValue]
-}
-
-object PathBuilder {
-  implicit def stringStep2JsPath[RemainingPath <: Path](implicit remainingPath: PathBuilder[RemainingPath]): PathBuilder[RemainingPath \ String] =
-    (path: RemainingPath \ String, config: Config) => remainingPath.toConfigPath(path.previousSteps, config) match {
-      case obj: ConfigObject => Try { obj.get(path.step) }.toOption
-      case _                 => throw new ConfigException.BadPath(path.step, "string") //TODO
-    }
-  implicit def intStep2JsPath[RemainingPath <: Path](implicit remainingPath: PathBuilder[RemainingPath]): PathBuilder[RemainingPath \ Int] =
-    (path: RemainingPath \ Int, config: Config) => remainingPath.toConfigPath(path.previousSteps, config) match {
-      case list: ConfigList => Try { list.get(path.step) }.toOption
-      case _                => throw new ConfigException.BadPath(path.step.toString, "int") //TODO
-    }
-  implicit def emptyStep2JsPath: PathBuilder[PathNil] =
-    (_: PathNil, config: Config) => Some(config.getObject(""))
 }
