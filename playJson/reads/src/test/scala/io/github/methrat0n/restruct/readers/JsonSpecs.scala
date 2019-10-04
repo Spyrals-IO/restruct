@@ -56,6 +56,15 @@ class JsonSpecs extends FlatSpec with Matchers {
     "int" -> 0
   )
 
+  private val complexeInstanceTest = Json.obj(
+    "str" -> "string",
+    "int" -> Json.arr(
+      Json.obj(
+        "test" -> 100
+      )
+    )
+  )
+
   //This exist to be able to call BigDecimal.apply without a warning being raised. When a SuppressWarning or equivalent is added to scala
   //this code should be removed
   object WorkAround { @deprecated("", "") class Intern { def decimal(f: Float): BigDecimal = BigDecimal(f) }; object Intern extends Intern }
@@ -641,13 +650,35 @@ class JsonSpecs extends FlatSpec with Matchers {
     val expect = JsSuccess(RequiredStringAndInt("string", 0))
     found shouldBe expect
   }
+
+  it should "read case class complexe instances" in {
+    val caseClassReader = ComplexeCase.schema.bind[Reads]
+
+    val found = caseClassReader.reads(complexeInstanceTest)
+    val expect = JsSuccess(ComplexeCase("string", 100, None))
+    found shouldBe expect
+  }
 }
 
 final case class RequiredStringAndInt(string: String, int: Int)
 object RequiredStringAndInt {
   import language.postfixOps
-  val schema = (
+  implicit val schema = (
     (Path \ "string").as[String]() and
     (Path \ "int").as[Int]()
-  ).inmap(RequiredStringAndInt.apply _ tupled)(RequiredStringAndInt.unapply _ andThen (_.get))
+  ).inmap(RequiredStringAndInt.apply _ tupled)(RequiredStringAndInt.unapply _ andThen(_.get))
+}
+
+final case class ComplexeCase(str: String, int: Int, help: Option[String])
+
+object ComplexeCase {
+  implicit val schema = (
+    (Path \ "str").as[String]() and
+    (Path \ "int" \ 0 \ "test").as[Int]() and
+    (Path \ "help").asOption[String]()
+  ).inmap {
+    case ((str, int), help) => ComplexeCase(str, int, help)
+  } {
+    case ComplexeCase(str, int, help) => ((str, int), help)
+  }
 }

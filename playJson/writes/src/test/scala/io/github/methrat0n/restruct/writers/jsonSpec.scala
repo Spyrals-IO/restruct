@@ -490,13 +490,44 @@ class jsonSpec extends FlatSpec with Matchers {
     )
     found shouldBe expect
   }
+
+  it should "write complex case class instances" in {
+    val caseClassWriter = ComplexCase.schema.bind[Writes]
+
+    val found = caseClassWriter.writes(ComplexCase("lol", 0, Some(RequiredStringAndInt("deep", 100))))
+    val expect = Json.obj(
+      "string" -> "lol",
+      "top" -> Json.obj(
+        "int" -> 0
+      ),
+      "maybe" -> Json.obj(
+        "string" -> "deep",
+        "int" -> 100
+      )
+
+    )
+    found shouldBe expect
+  }
 }
 
 final case class RequiredStringAndInt(string: String, int: Int)
 object RequiredStringAndInt {
   import language.postfixOps
-  val schema = (
+  implicit val schema = (
     (Path \ "string").as[String]() and
     (Path \ "int").as[Int]()
   ).inmap(RequiredStringAndInt.apply _ tupled)(RequiredStringAndInt.unapply _ andThen (_.get))
+}
+
+final case class ComplexCase(str: String, int: Int, maybe: Option[RequiredStringAndInt])
+object ComplexCase {
+  implicit val schema = (
+    (Path \ "string").as[String]() and
+    (Path \ "top" \ "int").as[Int]() and
+    (Path \ "maybe").asOption[RequiredStringAndInt]()
+  ).inmap {
+      case ((str, int), maybe) => ComplexCase(str, int, maybe)
+    } {
+      case ComplexCase(str, int, maybe) => ((str, int), maybe)
+    }
 }
