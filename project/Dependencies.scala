@@ -18,8 +18,8 @@ object Dependencies {
   }
 
   object mongo {
-    val version = "0.16.0" //TODO retro
-    val reactive = "org.reactivemongo" %% "reactivemongo" % version //TODO should work, or do something specific for basic mongo
+    val version = "1.0.52"
+    val reactive = "org.eu.acolyte" %% "reactive-mongo" % version //TODO should work, or do something specific for basic mongo
   }
 
   object play {
