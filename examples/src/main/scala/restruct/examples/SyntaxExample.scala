@@ -30,6 +30,7 @@ object SyntaxExample extends App {
       |  "__type": "Badser"
       |}
     """.stripMargin
+
   import io.github.methrat0n.restruct.handlers.json._
 
   GoodUser.schema.bind[Format].reads(Json.parse(goodUserJson)) match {
