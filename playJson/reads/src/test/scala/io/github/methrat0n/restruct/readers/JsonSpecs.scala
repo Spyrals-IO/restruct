@@ -666,7 +666,7 @@ object RequiredStringAndInt {
   implicit val schema = (
     (Path \ "string").as[String]() and
     (Path \ "int").as[Int]()
-  ).inmap(RequiredStringAndInt.apply _ tupled)(RequiredStringAndInt.unapply _ andThen(_.get))
+  ).inmap(RequiredStringAndInt.apply _ tupled)(RequiredStringAndInt.unapply _ andThen (_.get))
 }
 
 final case class ComplexeCase(str: String, int: Int, help: Option[String])
@@ -677,8 +677,8 @@ object ComplexeCase {
     (Path \ "int" \ 0 \ "test").as[Int]() and
     (Path \ "help").asOption[String]()
   ).inmap {
-    case ((str, int), help) => ComplexeCase(str, int, help)
-  } {
-    case ComplexeCase(str, int, help) => ((str, int), help)
-  }
+      case ((str, int), help) => ComplexeCase(str, int, help)
+    } {
+      case ComplexeCase(str, int, help) => ((str, int), help)
+    }
 }

@@ -22,7 +22,6 @@ lazy val reads = (project in file("./playJson/reads"))
   .settings(addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.10.3"))
   .settings(libraryDependencies ++= playJsonDependencies)
   .settings(name := "restruct-play-json-reads")
-  .settings(libraryDependencies += Dependencies.chuusai.shapeless)
   .dependsOn(core)
 
 lazy val writes = (project in file("./playJson/writes"))
