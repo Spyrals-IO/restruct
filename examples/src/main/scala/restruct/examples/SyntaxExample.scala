@@ -6,6 +6,15 @@ import play.api.mvc.QueryStringBindable
 
 object SyntaxExample extends App {
 
+  import io.github.methrat0n.restruct.handlers.json._
+  import play.api.libs.json.Writes
+
+  val nameSchema = (Path \ "name").as[String]()
+  val nameWrites: Writes[String] = nameSchema.bind[Writes]
+
+  val name = "Methrat0n"
+  nameWrites.writes(name)
+
   val goodJson =
     """
       |{
@@ -83,7 +92,11 @@ final case class BadUser(name: String, age: Int) extends User
 object BadUser {
   implicit val schema =
     ((Path \ "name").as[String]() and
-      (Path \ "age").as[Int]()).inmap(BadUser.apply _ tupled)(BadUser.unapply _ andThen (_.get))
+      (Path \ "age").as[Int]()).inmap {
+      case (name, age) => User(name, age)
+    } {
+      case User(name, age) => (name, age)
+    }
 
   implicit val reads: Reads[BadUser] = {
     import io.github.methrat0n.restruct.handlers.json._

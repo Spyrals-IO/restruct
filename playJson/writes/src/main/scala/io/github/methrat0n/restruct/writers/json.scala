@@ -65,6 +65,10 @@ object json extends WritesMiddlePriority {
       override def toJsPath(path: RemainingPath \ String): JsPath = JsPath(remainingPath.toJsPath(path.previousSteps).path :+ KeyPathNode(path.step))
     }
 
+    implicit def intStep2JsPath[RemainingPath <: Path](implicit remainingPath: WritesPathBuilder[RemainingPath]) = new WritesPathBuilder[RemainingPath \ Int] {
+      override def toJsPath(path: RemainingPath \ Int): JsPath = JsPath(remainingPath.toJsPath(path.previousSteps).path :+ KeyPathNode(path.step.toString))
+    }
+
     implicit def emptyStep2JsPath: WritesPathBuilder[PathNil] = (_: PathNil) => JsPath(List.empty)
   }
 
