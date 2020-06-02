@@ -3,11 +3,16 @@
 Simply derive any format from any type.
 
 
-__sbt :__
+## Use with sbt
+
+```scala
+libraryDependencies += "io.github.methrat0n" %% "restruct-all" % "2.0.0"
+```
+
+You can also choose to include only the parts you need.
 
 ```scala
 libraryDependencies ++= Seq(
-  "io.github.methrat0n" %% "restruct-all" % "2.0.0", //for all the supported formats
   "io.github.methrat0n" %% "restruct-core" % "2.0.0", //for only the internals, no format supported
   "io.github.methrat0n" %% "restruct-query-string-bindable" % "2.0.0", //for only the play query string format
   "io.github.methrat0n" %% "restruct-config-loader" % "2.0.0", //for only the play config format
@@ -21,11 +26,11 @@ libraryDependencies ++= Seq(
 
 # Motivation
 
-`restruct` exist because no other library do this job. At day, you have to write a reader or writer for each schema you want to support. Which means, if you need to parse from `XML` and send back `JSON` most of the times but also `YML` some other times, you have to use three libraries, learn each of them and implement their own type classes or structures just to pass the data around.
+You need an API with an endpoint which accepts bodies in `JSON` and `XML`. It always responds `YAML`. Without `restruct` you would have to use three different libraries, learn each of them and implement their own type classes or structures just to pass the data around.
 
-That is what `restruct` is about: do not write structures for each format you need, write your own business structure and describe the look of that data. `restruct` will _restructurate_ it for you.
+That is what `restruct` is about: do not write structures for each format you need, write your own model along with its data schema. `restruct` will then _restructurates_ it for you.
 
-This also has the advantages to bring a unify way of describing datas for all formats and unifing libraries interfaces, while still letting you access the specificity of your library of choice.
+This also has the advantages to bring a unified way of describing data for every format and unifing libraries interfaces, while still letting you access the specificity of your library of choice.
 
 # Examples
 
@@ -88,7 +93,7 @@ object User {
 
 # Usages
 
-`restruct` see your types as structures (set of properties) with a name on top of it. Which means it's necessary to describe each property. A property is made of an acess path (where to read or write the data) and a type.
+`restruct` see your types as structures (set of properties) with a name on top of it. Which means it's necessary to describe each property. A property is made of an access path (where to read or write the data) and a type.
 
 ```scala
 // State that data is at the top property 'name'
@@ -115,7 +120,7 @@ After pointing to the data, you need to tag it with a type.
 ```
 _Note that the last parentheses couples is mandatory due to [Scala implicit limitations](#Why-the-last-parentheses?)_
 
-Whith just that, you have stated that a property exist at some path. __This is enought to read or write.__ But restruct does not provide a `Reader` or `Writer` of any type, you are free to choose from [our supported libraries](). 
+Witch just that, you have stated that a property exist at some path. __This is enought to read or write.__ But restruct does not provide a `Reader` or `Writer` of any type, you are free to choose from [our supported libraries](). 
 
 For the example, let's say you want to write `JSON` using [Play-Json]()
 
