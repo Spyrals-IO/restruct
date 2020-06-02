@@ -2,7 +2,11 @@ package io.github.methrat0n.restruct.schema
 
 import io.github.methrat0n.restruct.schema.Interpreter.{ OptionalInterpreter, RequiredInterpreter }
 
-final case class OptionalField[P <: Path, Type, TypeInterpreter[Format[_]] <: Interpreter[Format, Type]](path: P, part: Schema[Type, TypeInterpreter], default: Option[Option[Type]]) extends Schema[Option[Type], λ[Format[_] => OptionalInterpreter[Format, P, Type, TypeInterpreter[Format]]]] {
+final case class OptionalField[P <: Path, Type, TypeInterpreter[Format[_]] <: Interpreter[Format, Type]](
+  path: P,
+  part: Schema[Type, TypeInterpreter],
+  default: Option[Option[Type]]
+) extends Schema[Option[Type], λ[Format[_] => OptionalInterpreter[Format, P, Type, TypeInterpreter[Format]]]] {
   //def defaultTo(default: Option[Type]): Field[P, Option[Type]] = copy(default = Some(default))
   def bind[Format[_]](implicit algebra: OptionalInterpreter[Format, P, Type, TypeInterpreter[Format]]): Format[Option[Type]] =
     algebra.optional(path, part.bind[Format](algebra.originalInterpreter), default)

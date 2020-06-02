@@ -1,12 +1,13 @@
 package restruct.examples
 
 import io.github.methrat0n.restruct.schema.Path
-import play.api.libs.json.{Format, JsSuccess, Json, Reads, Writes}
+import play.api.libs.json.{ Format, JsSuccess, Json, Reads }
 import play.api.mvc.QueryStringBindable
 
 object SyntaxExample extends App {
 
   import io.github.methrat0n.restruct.handlers.json._
+  import io.github.methrat0n.restruct.writers.json._
   import play.api.libs.json.Writes
 
   val nameSchema = (Path \ "name").as[String]()
@@ -93,10 +94,10 @@ object BadUser {
   implicit val schema =
     ((Path \ "name").as[String]() and
       (Path \ "age").as[Int]()).inmap {
-      case (name, age) => User(name, age)
-    } {
-      case User(name, age) => (name, age)
-    }
+        case (name, age) => BadUser(name, age)
+      } {
+        case BadUser(name, age) => (name, age)
+      }
 
   implicit val reads: Reads[BadUser] = {
     import io.github.methrat0n.restruct.handlers.json._
