@@ -119,6 +119,8 @@ lazy val scalariformCommonSettings = Seq(
     .setPreference(NewlineAtEndOfFile, true)
 )
 
+credentials += Credentials(Path.userHome / ".sbt" / "sonatype_credentials")
+
 ThisBuild / organization := "io.github.methrat0n"
 ThisBuild / organizationName := "methrat0n"
 ThisBuild / organizationHomepage := Some(url("https://methrat0n.github.io/"))
