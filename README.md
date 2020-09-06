@@ -1,294 +1,549 @@
 # Restruct
 
-Restruct let you describe your types in a unyfied syntax and derived any format from this very same syntax.
+Write your data model once, derive any new format from it.
 
-### Case Class
+## Use with sbt
 
-First, define a field schema. Choose a name and paired it with its type :
 ```scala
-import io.github.methrat0n.restruct.schema.Schema
-import io.github.methrat0n.restruct.schema.Syntax._
-  
-val usernameFieldSchema: Schema[String] = "username".as[String]
+libraryDependencies += "io.github.methrat0n" %% "restruct-all" % "2.0.0"
 ```
 
-For optional field a specific function need to be called :
+You can also choose to include only the parts you need.
+
 ```scala
-import io.github.methrat0n.restruct.schema.Schema
-import io.github.methrat0n.restruct.schema.Syntax._
-  
-val optionalUsernameFieldSchema: Schema[Option[String]] = "username".asOption[String]
+libraryDependencies ++= Seq(
+  "io.github.methrat0n" %% "restruct-core" % "2.0.0", //for only the internals, no format supported
+  "io.github.methrat0n" %% "restruct-query-string-bindable" % "2.0.0", //for only the play query string format
+  "io.github.methrat0n" %% "restruct-config-loader" % "2.0.0", //for only the play config format
+  "io.github.methrat0n" %% "restruct-play-json" % "2.0.0", //for only play json Format, Writes and Reads
+  "io.github.methrat0n" %% "restruct-play-json-reads" % "2.0.0", //for only play json Reads format
+  "io.github.methrat0n" %% "restruct-play-json-writes" % "2.0.0", //for only play json Writes format
+
+  "io.github.methrat0n" %% "restruct-enumeratum" % "2.0.0" //for enumeratum helper
+)
 ```
 
-The `as` and `asOption` functions needs an implicit value of type `Schema[T]`. In our example, we need a `Schema[String]`.
-All defaults schema are provided by the `io.github.methrat0n.restruct.schema.Syntax._` import.
+## Motivation
 
-Then combine different fields to build the case class schema.
+You need an API with an endpoint which accepts bodies in `JSON` and `XML`.
+It always responds `YAML`.
+Without `Restruct` you would have to use three different libraries, learn each one of
+them and implement their own type classes or structures just to pass the data around.
 
+That is what `Restruct` is about: do not write structures for each format you need,
+write your own model along with its data schema. `Restruct` will then _restructurates_ it
+for you.
+
+This also has the advantages to bring a unified way of describing data for every format
+and unifying libraries interfaces, while still letting you access the specificity of your
+library of choice.
+
+## Examples
+
+#### Serializing a User to `JSON` using play-json
 ```scala
-final case class User(username: String, age: Int, bankAccount: Option[String])
+
+import io.github.methrat0n.restruct.schema.Path
+import play.api.libs.json.Writes
+
+//User definition
+final case class User(name: String, age: Int)
 
 object User {
-  import io.github.methrat0n.restruct.schema.Schema
-  import io.github.methrat0n.restruct.schema.Syntax._
-  
-  implicit lazy val schema: Schema[User] = 
-    "username".as[String] and
-    "age".as[Int] and
-    "bankAccount".asOption[String]      
+  //User schema
+  implicit val schema = (
+    (Path \ "name").as[String]() and //Mark 'name' as String
+    (Path \ "age").as[Int]() //Mark 'age' as Int
+  ).inmap(User.apply _ tupled)(User.unapply _ andThen(_.get)) //User from and to (String, Int)*
+
+  implicit val writes: Writes[User] = {
+    import io.github.methrat0n.restruct.readers.json._ //Implicits to build the Writes instances
+    schema.bind[Writes]
+  }
+}
+```
+\* The `inmap`call should not be necessary as soon as 2.1.0
+<hr />
+
+#### Reading `User` from query-string and writing `JSON`, in [play](https://www.playframework.com/)
+
+```scala
+
+import io.github.methrat0n.restruct.schema.Path
+import play.api.libs.json.Writes
+import play.api.mvc.QueryStringBindable
+
+//User definition
+final case class User(name: String, age: Int)
+
+object User {
+  //User schema
+  implicit val schema = (
+    (Path \ "name").as[String]() and
+    (Path \ "age").as[Int]()
+  ).inmap(User.apply _ tupled)(User.unapply _ andThen(_.get))
+
+  //Json Writer
+  implicit val writes: Writes[User] = {
+    import io.github.methrat0n.restruct.writers.json._
+    schema.bind[Writes]
+  }
+
+  //Query-string ReaderWriter
+  implicit val queryStringBindable: QueryStringBindable[User] = {
+    import io.github.methrat0n.restruct.handlers.queryStringBindable._
+    schema.bind[QueryStringBindable]
+  }
 }
 ```
 
-The fields combined with `and` need to match the case class signature.
-In our example, any `Schema` other than (`String` and `Int` and `Option[String]`) would have failed.
+## Usages
 
-With this schema, it's possible to derive any supported format.
+`Restruct` see your types as structures (set of properties) with a name on top of it.
+Which means it's necessary to describe each property.
+A property is made of an access path (where to read or write the data) and a type.
 
-````scala
-import io.github.methrat0n.restruct.readers.config.configLoader
-implicit lazy val schema: Schema[User] = ...
-implicit lazy val configLoader: ConfigLoader[User] = schema.bind(configLoader)
-````
+```scala
+// State that data is at the top property 'name'
+(Path \ "name")
+```
 
-We ask for a [ConfigLoader](https://www.playframework.com/documentation/2.6.x/ScalaConfig#configloader).
-In [Play Applications](https://www.playframework.com/), this implicit would allow to read our case class from the configuration.
+```scala
+// State that the data is at 'structure' inside 'data' itself inside 'complex'.
+(Path \ "complex" \ "data" \ "structure") 
+```
 
+As you see, you can describe complex access path.
+See [Complex Path](#Complex-Path) for more details.
 
-### Sealed trait
+After pointing to the data, you need to tag it with some type.
 
-Using the same syntax as before, a sealed trait can be describe
+```scala
+// The data at 'name' is a String
+(Path \ "name").as[String]()
+```
 
-````scala
-import io.github.methrat0n.restruct.schema.Schema
-import io.github.methrat0n.restruct.schema.Syntax._
+```scala
+// Option is a special case, you need to use the asOption function
+(Path \ "name").asOption[String]()
+```
+_Note that the last parentheses couples is mandatory due
+to Scala implicit limitations_
 
-sealed trait Person
+With just that, you have stated that a property exist at some path.
+__This is enough to read or write.__ You are free to choose readers or writers
+from [our supported libraries](#List-of-supported-libraries). 
 
-object Person {
-  final case class User(...) extends Person
-  object User {
-    implicit lazy val schema: Schema[User] = ???
+Let's say you want to write `JSON` using
+[Play-Json](https://github.com/playframework/play-json)
+
+```scala
+import io.github.methrat0n.restruct.writers.json._
+import play.api.libs.json.Writes
+
+val nameSchema = (Path \ "name").as[String]()
+val nameWrites: Writes[String] = nameSchema.bind[Writes]
+
+// Normal play-json from now on
+
+val name = "Methrat0n"
+nameWrites.writes(name) // Json.obj("name" -> "Methrat0n")
+```
+
+As you can see, we can derive a `Writes` from our `nameSchema`,
+therefore we can write a `String` to a `JsValue`.
+This writing will follow the rules we gave, only the path for now.
+
+_Note that we need the first import to be able to derive a `Writes`._
+
+## case class (Product types)
+
+Because `Restruct` see types as set of properties with a name,
+it follows that you just have to describe all properties of a `class` and use
+the provided properties to build the actual `class`.
+
+```scala
+// Type is called 'User' and has
+// two properties 'name' which is a String and 'age', an Int.
+final case class User(name: String, age: Int)
+
+//Companion object, because the schema is an implicit specific to User
+object User {
+  //build the two properties
+  val nameProperty = (Path \ "name").as[String]()
+  val ageProperty = (Path \ "age").as[Int]()
+}
+```
+
+Having the two properties, we can combine them:
+
+```scala
+...
+val nameAndAge = nameProperty and ageProperty
+... 
+```
+
+`nameAndAge` is the schema of two properties. This is near `User`,
+technically it's a `(String, Int)` schema.
+The last part is building the actual `User`:
+
+```scala
+... 
+val userSchema = nameAndAge.inmap {
+    case (name, age) => User(name, age)
+  } {
+    case User(name, age) => (name, age)
   }
-  final case class Citizen(...) extends Person
-  object Citizen {
-    implicit lazy val schema: Schema[Citizen] = ???
+...
+```
+
+`inmap` let us access the eventual value of the schema and return a new one,
+as long as we can do the opposite.
+At the end `userSchema` describe a user, or more precisely where to
+read/write data to obtain a `User`.
+
+Putting it all together:
+
+```scala
+final case class User(name: String, age: Int)
+
+//Companion object, because the schema is an implicit specific to User
+object User {
+  //User schema
+  implicit val schema = (
+    (Path \ "name").as[String]() and
+    (Path \ "age").as[Int]()
+  ).inmap {
+    case (name, age) => User(name, age)
+  } {
+    case User(name, age) => (name, age)
   }
-  
-  implicit lazy val schema: Schema[Person] =
-    User.schema or Citizen.schema
+}
+```
+
+To follow our example, we can derive a `Writes` instance from `schema`
+which will write `JSON` as we describe it in `schema`.
+
+```scala
+//Json Writer
+implicit val writes: Writes[User] = {
+  import io.github.methrat0n.restruct.writers.json._
+  schema.bind[Writes]
+}
+```
+
+Or we could derive a `ConfigLoader`, which allow us to
+read case class from the typesafe config:
+
+```scala
+implicit val configLoader: ConfigLoader[User] = {
+  import io.github.methrat0n.restruct.readers.configLoader._
+  schema.bind[ConfigLoader]
 }
 
-````
-`or` let us combine two schema into one.
-The `personSchema` can be infered if all its children are combined together and only its children.
+```
 
-### Path
+## Sealed traits (Coproduct types)
 
-It's possible to specify where to read / write your data.
-Instead of just giving a name to your fields, give them a full path.
+Sealed traits are essentially unions.
+In this new example, an `Animal` is essentially just a `Cat` or a `Dog`.
 
-This path can be build from `String` and `Int`. `String`s will be interpreted as object names in the structure and `Int`s as array indexes.
+```scala
+sealed trait Animal
 
-````scala
-import io.github.methrat0n.restruct.schema.Schema
-import io.github.methrat0n.restruct.schema.Syntax._
+final case class Cat(numberOfLife: Int) extends Animal
+final case class Dog(name: String) extends Animal
+```
 
-implicit lazy val schema: Schema[User] = 
-  "bodies" \ 0 \ "username".as[String] and
-  "bodies" \ 0 \ "age".as[Int] and
-  "bodies" \ 0 \ "bankAccount".asOption[String]  
+Because we can reduce an `Animal` to just that, `Cat` __or__ `Dog`,
+that's how `Restruct` support sealed trait:
+
+```scala
+
+sealed trait Animal
+
+object Animal {
+  implicit val schema = (Cat.schema or Dog.schema).inmap {
+    case Right(cat) => cat
+    case Left(dog) => dog
+  } {
+    case cat: Cat => Right(cat)
+    case dog: Dog => Left(dog)
+  }
 }
-````
 
-Our username will now be read from the top array named `bodies`. At index 0 should be an object, in which we select the field "username".
-If we read our user from a json string, a matching example would be :
+// Assuming Cat.schema and Dog.schema to be define as seen before
+```
 
+## Complex Path
+Paths let you point `Restruct` to your data.
+There is mostly two types of steps inside a path: either it's an `Int` or it's a `String`.
+The fist case, `Int` correspond to an index inside some sequence,
+for example an `Array`, a `Seq` or any other type for which a number can be considered
+a unique key to some value (yes, a `Map<Int, T>` will work).
+The second case, `String`, is simpler : it's the name of the field you want to actually
+point to. For example, inside a `JSON`, objects are made of fields which are named.
+
+This two kinds of steps can be mixed together freely to describe where to read or write.
+
+#### Just a single `String` step
+
+```scala
+(Path \ "name")
+```
+
+The Simplest path, it prescribes to read or write data inside the `name` field.
+
+Corresponding `JSON` example:
 ```json
 {
-  "bodies": [
-    {
-      "username": "kevin",
-      "age": 12,
-      "bankAccount": "0xCCC220JZOCNI"
-    }
-  ]
+  "name": "Methrat0n"
+}
+```
+Corresponding query-string example:
+```
+name="Methrat0n"
+```
+
+<hr />
+
+#### Just a single `Int` step
+
+```scala
+(Path \ 0)
+```
+
+`Int` step mean to read at "index" 0.
+Most of the time this is link to arrays,
+but specific format may change this meaning.
+
+Corresponding `JSON` example:
+```json
+[ "Methrat0n" ]
+```
+
+<hr />
+
+#### Mutliple `String` steps
+
+```scala
+(Path \ "names" \ "firstname")
+```
+
+Going deeper, inside the field to grab the value we need.
+
+Corresponding `JSON` example:
+```json
+{
+  "names": {
+    "firstname": "Methrat0n"
+  }
 }
 ```
 
-Note that some format does not support this feature, see the limitation parts.
+<hr />
 
-### Default value
-
-You can add a default value to your fields.
-
-````scala
-import io.github.methrat0n.restruct.schema.Schema
-import io.github.methrat0n.restruct.schema.Syntax._
-
-implicit lazy val schema: Schema[User] = 
-  "username".as[String].defaultTo("kevin") and
-  "age".as[Int] and
-  "bankAccount".asOption[String]  
-````
-The default value must be of the same type as the field. Following, for optional field, an `Option[T]` must be passed.
-The default value will only ever be used if the field cant be found in data.
-
-### Constraints
-
-Constraints can be placed onto your field.
-This is typicaly usefull for validation, but can also be used to describe more clearly an interface contract.
-
-````scala
-import io.github.methrat0n.restruct.schema.Schema
-import io.github.methrat0n.restruct.schema.Syntax._
-
-implicit lazy val schema: Schema[User] = 
-  "username".as[String].constraintedBy(Constraints.EqualConstraint("kevin")) and
-  "age".as[Int] and
-  "bankAccount".asOption[String]  
-````
-
-By passing a constraint onto a field we state "this field should always equals 'kevin' ".
-Constraint can be pass at every levels: on fields, on simple schema or complex one.
+#### Mutliple `Int` steps
 
 ```scala
-import io.github.methrat0n.restruct.schema.Schema
-import io.github.methrat0n.restruct.schema.Syntax._
-import io.github.methrat0n.restruct.core.data.constraints.Constraints
-
-val kevinSchema: Schema[String] = string.constraintedBy(Constraints.EqualConstraint("kevin"))
-val userWithAccountSchema: Schema[User] = User.schema.constraintedBy(UserConstraints.WithAccount)
+(Path \ 0 \ 1)
 ```
 
-The first line define a schema for string which only allow "kevin" as valid value.
-The second line use a fake UserConstraints package to create a schema for User.
-This schema will be in error if the bankAccount property is None.
+Multiple `Int` steps, most of the time, means imbricated arrays.
 
-### Without implicit conversion
+Corresponding `JSON` example:
+```json
+[
+  ["Wismerhill", "Methrat0n"]
+]
+```
 
-Three implicit conversions exist in the syntax. The first two transform a String or an Int to a Path. Allowing the `as`, `asOption` and `\` syntax.
-If you prefer, it's also possible to prefix your Path with a `Path \`
+<hr />
+
+#### Mixing it all together
 
 ```scala
-import io.github.methrat0n.restruct.schema.Syntax._
-
-val ageAsInt = "age".as[Int]
+(Path \ "names" \ "firstnames" \ 1)
 ```
 
-become
+Select the first element of the field `firstnames`, itself inside the `names` field.
+
+Corresponding `JSON` example:
+```json
+{
+  "names": {
+    "firstnames": ["Wismerhill", "Methrat0n"]
+  }
+}
+```
+
+### Not all formats support all paths
+
+As we've seen, `Int` and `String` steps are for indexed structure,
+but not all formats support index of type `Int` __and__ `String`,
+sometimes just one of them.
+We've also said that paths can be composed of multiple steps,
+but why should all formats support that?
+Maybe it just supports three levels, maybe just one ?
+How can we be sure ?
+
+Query-strings do not support composite fields and cant be arrays.
+Which means that ` (Path \ 0) ` or `(Path \ "names" \ "firstname")` cannot work.
+Actually, you can only pass one `String` step for query-strings.
+
+`Restruct` was redesign partly for this problem and since `2.0.0`
+it simply does __not__ compile.
+If you try to bind a schema which contains paths
+(or other features, see [Compile time errors](#Compile-time-errors))
+it simply does not compile because of missing implicits.
+
+Let's see an example:
+```scala
+final case class User(name: String, age: Int)
+
+object User {
+  implicit val schema = (
+    //Note the two level path
+    (Path \ "names" \ "firstname").as[String]() and
+    (Path \ "age").as[Int]()
+  ).inmap {
+    case (name, age) => User(name, age)
+  } {
+    case User(name, age) => (name, age)
+  }
+}
+```
+
+This example compile fine by itself.
+It defines a schema for `User`, as long it's syntactically correct, nothing can be wrong.
 
 ```scala
-import io.github.methrat0n.restruct.schema.Syntax._
-import io.github.methrat0n.restruct.core.data.schema.Path
 
-val ageAsInt = (Path \ "age").as[Int]
+// Play-json Writes. Support String step to any deps, compile fine
+implicit val writes: Writes[User] = {
+  import io.github.methrat0n.restruct.writers.json._
+  schema.bind[Writes]
+}
+// QueryStringBindable. Does not compile, complain about a missing implicits in IDE
+implicit val queryStringBindable: QueryStringBindable[User] = {
+  import io.github.methrat0n.restruct.handlers.queryStringBindable._
+  schema.bind[QueryStringBindable]
+}
 ```
 
-The third implicit conversion is on the Schema construction itself. When you mix schemas using the `and` function it does not
-build a `Schema[YourType]` if build a composite Schema of tuples. To transform the first into the last, the Schema `apply` function is called implicitly.
+As you can see, compile errors are very format specific.
+
+_Note that even if your IDE may complain about a missing implicit,
+the compiler error clearly point to a possible path error._
+
+### Path Override
+
+Most of the time, `Int` steps will mean the data is store inside an array and,
+most of the time, `String` steps will point to fields of some kind of object.
+But that's just for "most of the time" cases.
+You may have cases where you need to read by lexicographical order,
+or maybe you want to write to the reverse path that is actually written ?
+Because we all have weird and very personal use cases.
+
+`restruct-core` only define how to write a path,
+it does not make any assumptions on how this path should actually be
+used when reading or writing data.
+It allows each format to be independent on how they handle their paths.
+As an end user, you can still change how your paths are interpreted
+by defining local implicits.
+If you are a library writer and want to learn how to implement a
+new format for `Restruct`, see [Writing your own format implementation](#Writing-your-own-format-implementation).
+
+We'll take one example on how to override path interpretation.
+
+#### Play-Json
+
+By default, play-json `Reads` will support any path.
+In other hands, `Writes` does not accept `Int` steps.
+Let's say you actually want to support `Int` steps, you decide your way of doing it:
+`Int` step will not be put inside an array but instead a `0` will become `"0"`
+and serve as field name. That means:
+```scala
+(Path \ "names" \ "firstnames" \ 1)
+```
+will be equivalent to
+```scala
+(Path \ "names" \ "firstnames" \ "1")
+```
+We will not judge you, you must have a very good reason.
+You can achieve it by looking inside the "restruct-play-json-writes"
+package. You will see that the path is implicitly handle by the type
+class `WritesPathBuilder`. Only `String` case exist by default, but you can
+create the `Int` one.
 
 ```scala
-import io.github.methrat0n.restruct.schema.Schema
-import io.github.methrat0n.restruct.schema.Syntax._
-
-implicit lazy val schema: Schema[User] = 
-  "username".as[String] and
-  "age".as[Int] and
-  "bankAccount".asOption[String]  
+implicit def intStep2JsPath[RemainingPath <: Path](implicit remainingPath: WritesPathBuilder[RemainingPath]) = new WritesPathBuilder[RemainingPath \ Int] {
+  override def toJsPath(path: RemainingPath \ Int): JsPath = JsPath(remainingPath.toJsPath(path.previousSteps).path :+ KeyPathNode(path.step.toString))
+}
 ```
 
-become 
+That's no simple code, but it will suffice to define it once and import it below `Restruct`.
 
-````scala
-import io.github.methrat0n.restruct.schema.Schema
-import io.github.methrat0n.restruct.schema.Syntax._
+### Compile time errors
+_This is an explanation on the current design of `Restruct`,
+you do not need this to use the library_
 
-implicit lazy val schema: Schema[User] = Schema(
-  "username".as[String] and
-  "age".as[Int] and
-  "bankAccount".asOption[String]
-)
-````
+`Restruct 2.0` was re-design to answer a problem: how can we avoid having to `throw` in
+each format that does not support all `Restruct` features ?
+The most visible case, but not the only one, was about the path.
+We want to be able to describe complex paths, but the more complexity in the path syntax,
+the fewer formats would be able to support it completely.
+At the end, each format will have "holes" into it's implementation
+that each end user would have to know before using `Restruct`.
+That's terrible user experience and, after many tries, the final answer
+was to add a "compilation-phase" to the library.
+We did it by realising that _implicits are proofs_. If the compiler
+does find an implicit it's only because it was able to build it.
+Therefore, by requesting an implicit which respect our model we are
+basically asking the compiler if it can prove that a given schema is
+compatible with a given format.
 
-### Strict Schema
-When working with sealed traits, there can be a matching problem.
-If a trait have multiple childrens with the same type signature, it's impossible to differenciate them.
-To match the right type, you need a StrictSchema.
+This new design allow us to "elevate" runtime error to compilation errors,
+therefore detecting incompatibility between a schema and a format sooner.
+Most importantly, users do __not__ have to know each "holes" in the implementation,
+the compiler will tell them.
 
-````scala
-import io.github.methrat0n.restruct.schema.Schema
-import io.github.methrat0n.restruct.schema.Syntax._
+### Writing your own format implementation
 
-implicit lazy val schema: Schema[User] = StrictSchema(
-  "username".as[String] and
-  "age".as[Int] and
-  "bankAccount".asOption[String]
-)
-````
+`Restruct` is made of small modules. Each one of them has the
+responsibility to support one format.
+A format may just Read or just Write data, or it may do both.
+In `Restruct` all modules depends on `restruct-core` which provide
+the type class hierarchy of interpreters and the end syntax.
+If you want to add support for another format, you can create a new module,
+add the dependency to `restruct-core` and begin writing an implementation of
+the interpreters.
+If you need help, we will be happy to answer any questions. Don't be afraid
+and post yours in the issue tracker.
 
-This schema will add a `__type` field into your structure, which will hold your type's name.
-This could also be used to serialize your type's name, in case of meaningful ADT or enumeration.
+To help you, here is a basic explanation on how to do it:
+ - Decide on which library/format you want to add
+ - Does it read ? write ? both ?
+   - If both is the answer, can you split the read and write part or
+     is it made of a whole ?
+     To help you, play-json is made of multiple types (Reads, Writes and Format)
+     on the other side QueryStringBindable is one lonely type.
+   - You should create a module for each format, one for the reader,
+     one for the writer and one for the handler. If possible.
+ - Place the new format inside the right package: 
+   io.github.methrat0n.restruct.<readers | writers | handlers>
+ - Create an object named after your schema, then implement all
+   the interpreters you can inside it.
+- Write a little documentation about what is supported and what isn't.
+  Even if the compiler will tell them, your users will appreciate some explanations.
 
-### Helpful macro
-A schema can be derived from your class or sealed trait directly by calling macros.
+### Constraining types
 
-```scala
-import io.github.methrat0n.restruct.schema.Schema
+will return soon
 
-implicit lazy val schema: Schema[User] = Schema.of[User]
-implicit lazy val strictSchema: Schema[User] = StrictSchema.of[User]
-```
-
-It will write a schema based on your type informations.
-Which mean neither path syntax nor fields constraints will be available.
-
-### Create a Schema from an existing one
-In case some schema is needed but is not provided by the syntax, a new one can be build easily.
-```scala
-import io.github.methrat0n.restruct.schema.Schema
-import io.github.methrat0n.restruct.schema.Syntax.list
-
-implicit def arraySchema[T](implicit schema: Schema[T]): Schema[Array[T]] =
-  list[T](schema).inmap(_.toArray)(_.toList)
-```
-Here a `Schema[Array[T]]` is defined from the default list Schema. The `inmap` function is defined in `Schema` and can be used
-to obtains a new `Schema` from an existing one.
-
-#### Using Restruct
-Restruct is still in beta and tests aren't fully written. Nevertherless, the last version of the library is 0.1.0 and is
-compatible with scala and ScalaJs 2.12
-
-If you are using sbt add the following to your build:
-```sbt
-libraryDependencies ++= Seq(
-  "io.github.methrat0n" %% "restruct-all" % "1.0.0", //for all the supported formats
-  "io.github.methrat0n" %% "restruct-core" % "1.0.0", //for only the internals, no format supported
-  "io.github.methrat0n" %% "restruct-query-string-bindable" % "1.0.0", //for only the play query string format
-  "io.github.methrat0n" %% "restruct-config-loader" % "1.0.0", //for only the play config format
-  "io.github.methrat0n" %% "restruct-json-schema" % "1.0.0", //for only a jsonSchema writer
-  "io.github.methrat0n" %% "restruct-play-json" % "1.0.0", //for only play json Format, Writes and Reads
-  "io.github.methrat0n" %% "restruct-play-json-reads" % "1.0.0", //for only play json Reads format
-  "io.github.methrat0n" %% "restruct-play-json-writes" % "1.0.0", //for only play json Writes format
-  "io.github.methrat0n" %% "restruct-bson" % "1.0.0", //for only reactive-mongo BSONHandler, BSONWriter and BSONReader
-  "io.github.methrat0n" %% "restruct-bson-writer" % "1.0.0", //for only reactive-mongo BSONWriter
-  "io.github.methrat0n" %% "restruct-bson-reader" % "1.0.0", //for only reactive-mongo BSONReader
-  
-  "io.github.methrat0n" %% "restruct-enumeratum" % "1.0.0" //for enumeratum helper
-)
-```
-
-For Scala.js just replace %% with %%% above.
-
-Instructions for Maven and other build tools are available at [search.maven.org.](https://search.maven.org/search?q=g:io.github.methrat0n)
-
-### Limitations
-
-#### Query-String-Bindable
-The path syntax is not supported for query-string as querystrings contains only one layer.
-If a schema with path is bind to the `queryStringBindable` object a `RuntimeException` will be raised (this exception should be more specific with time).
-
-
-### Known issues
-
-#### Macro derivation cant find default value
-Currently, the schemas derived using macro will not contains default values even if they are present in the corresponding case class.
+## List of supported formats or libraries:
+ - [play-json](https://github.com/playframework/play-json) with `restruct-play-json`
+ - [enumeratum](https://github.com/lloydmeta/enumeratum) with `restruct-enumeratum`
+ - [ConfigLoader](https://www.playframework.com/documentation/2.6.x/ScalaConfig#configloader) with `restruct-config-loader`
+ - [QueryStringBindable](https://www.playframework.com/documentation/2.7.x/api/scala/play/api/mvc/QueryStringBindable.html) with `restruct-query-string-bindable`
+ 

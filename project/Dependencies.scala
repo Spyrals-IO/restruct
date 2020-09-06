@@ -9,7 +9,7 @@ object Dependencies {
 
   object test {
     val version = "3.0.8"
-    val scalaTest = "org.scalatest" %% "scalatest" % version
+    val scalaTest = "org.scalatest" %% "scalatest" % version % "test"
   }
 
   object json {
