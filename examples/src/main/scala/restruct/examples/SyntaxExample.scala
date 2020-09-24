@@ -1,12 +1,11 @@
 package restruct.examples
 
-import io.github.methrat0n.restruct.schema.Path
+import io.github.methrat0n.restruct.schema.{ Path }
 import play.api.libs.json.{ Format, JsSuccess, Json, Reads }
 import play.api.mvc.QueryStringBindable
 
 object SyntaxExample extends App {
 
-  import io.github.methrat0n.restruct.handlers.json._
   import io.github.methrat0n.restruct.writers.json._
   import play.api.libs.json.Writes
 
