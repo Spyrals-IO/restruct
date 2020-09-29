@@ -6,17 +6,21 @@ import io.github.methrat0n.restruct.schema.Interpreter._
 object Schemas {
   final case class And[A, B, AInterpreter[Format[_]] <: Interpreter[Format, A], BInterpreter[Format[_]] <: Interpreter[Format, B]](schemaA: Schema.Aux[A, AInterpreter], schemaB: Schema.Aux[B, BInterpreter]) extends Schema[(A, B)] {
     override type InternalInterpreter[Format[_]] = SemiGroupalInterpreter[Format, A, B, AInterpreter[Format], BInterpreter[Format]]
-    def bind[Format[_]](implicit interpreter: SemiGroupalInterpreter[Format, A, B, AInterpreter[Format], BInterpreter[Format]]): Format[(A, B)] =
+    override def bind[Format[_]](implicit interpreter: SemiGroupalInterpreter[Format, A, B, AInterpreter[Format], BInterpreter[Format]]): Format[(A, B)] =
       interpreter.product(
         schemaA.bind[Format](interpreter.originalInterpreterA),
         schemaB.bind[Format](interpreter.originalInterpreterB)
       )
+
   }
 
   final case class Or[A, B, AInterpreter[Format[_]] <: Interpreter[Format, A], BInterpreter[Format[_]] <: Interpreter[Format, B]](schemaA: Schema.Aux[A, AInterpreter], schemaB: Schema.Aux[B, BInterpreter]) extends Schema[Either[A, B]] {
     override type InternalInterpreter[Format[_]] = OneOfInterpreter[Format, A, B, AInterpreter[Format], BInterpreter[Format]]
     override def bind[F[_]](implicit interpreter: OneOfInterpreter[F, A, B, AInterpreter[F], BInterpreter[F]]): F[Either[A, B]] =
-      interpreter.or(schemaA.bind[F](interpreter.originalInterpreterA), schemaB.bind[F](interpreter.originalInterpreterB))
+      interpreter.or(
+        schemaA.bind[F](interpreter.originalInterpreterA),
+        schemaB.bind[F](interpreter.originalInterpreterB)
+      )
   }
 
   final class SimpleSchema[Type] extends Schema[Type] {

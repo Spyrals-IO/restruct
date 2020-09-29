@@ -5,8 +5,9 @@ import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 import io.github.methrat0n.restruct.constraints.Constraint
 import io.github.methrat0n.restruct.schema.Schemas._
 
-//import scala.language.experimental.macros
-//import scala.reflect.macros.blackbox
+import language.implicitConversions
+import scala.language.experimental.macros
+import scala.reflect.macros.blackbox
 
 trait Schema[Type] { self =>
 
@@ -15,17 +16,17 @@ trait Schema[Type] { self =>
   def bind[Format[_]](implicit interpreter: InternalInterpreter[Format]): Format[Type]
 
   def constraintedBy(constraint: Constraint[Type]): ConstrainedSchema[Type, InternalInterpreter] =
-    ConstrainedSchema[Type, InternalInterpreter](self.asInstanceOf[Schema.Aux[Type, InternalInterpreter]], constraint)
+    ConstrainedSchema[Type, InternalInterpreter](self, constraint)
 
   def and[B, BInterpreter[Format[_]] <: Interpreter[Format, B]](
     schema: Schema.Aux[B, BInterpreter]
   ): And[Type, B, InternalInterpreter, BInterpreter] =
-    And[Type, B, InternalInterpreter, BInterpreter](self.asInstanceOf[Schema.Aux[Type, InternalInterpreter]], schema)
+    And[Type, B, InternalInterpreter, BInterpreter](self, schema)
 
   def or[B, BInterpreter[Format[_]] <: Interpreter[Format, B]](
     schema: Schema.Aux[B, BInterpreter]
   ): Or[Type, B, InternalInterpreter, BInterpreter] =
-    Or[Type, B, InternalInterpreter, BInterpreter](self.asInstanceOf[Schema.Aux[Type, InternalInterpreter]], schema)
+    Or[Type, B, InternalInterpreter, BInterpreter](self, schema)
 
   def inmap[B](f: Type => B)(g: B => Type): InvariantSchema[Type, B, InternalInterpreter] =
     InvariantSchema[Type, B, InternalInterpreter](self.asInstanceOf[Schema.Aux[Type, InternalInterpreter]], f, g)
@@ -35,12 +36,22 @@ object Schema extends LowPriorityImplicits {
 
   type Aux[Type, InternalInterpreter0[Format[_]] <: Interpreter[Format, Type]] = Schema[Type] { type InternalInterpreter[F[_]] = InternalInterpreter0[F] }
 
-  def apply[Typ, Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
-    schema: Schema.Aux[Composition, λ[Format[_] => Interpreter[Format, Composition]]]
-  ): InvariantSchema[Composition, Typ, OwnInterpreter] =
-    ???
+  object Aux {
+    implicit def toAux[Type](schema: Schema[Type]): Schema.Aux[Type, schema.InternalInterpreter] = schema
+  }
+  implicit def fromAux[Type, Interpret[Format[_]] <: Interpreter[Format, Type]](schema: Schema.Aux[Type, Interpret]): Schema[Type] = schema
 
-  //def of[Type]: Schema[Type] = macro Impl.simpleOf[Type]
+  def apply[Type <: Product, Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
+    schema: Schema.Aux[Composition, OwnInterpreter]
+  ): InvariantSchema[Composition, Type, OwnInterpreter] = macro Impl.simple[Type, Composition, OwnInterpreter]
+
+  //  def apply[Type <: Product]: ApplySchemeInferer[Type] = new ApplySchemeInferer[Type]
+  //
+  //  final class ApplySchemeInferer[Type] {
+  //    def apply[Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
+  //      schema: Schema.Aux[Composition, OwnInterpreter]
+  //    ): InvariantSchema[Composition, Type, OwnInterpreter] = macro Impl.simple[Composition, OwnInterpreter]
+  //  }
 }
 
 private[schema] trait LowPriorityImplicits {
@@ -63,37 +74,57 @@ private[schema] trait LowPriorityImplicits {
   implicit def simpleT: SimpleSchema[LocalTime] = new SimpleSchema[LocalTime]
   implicit def simple[Type <: AnyVal]: SimpleSchema[Type] = new SimpleSchema[Type]
 }
-/*
-object StrictSchema {
-  def apply[Typ, Composition](schema: Schema[Composition]): Schema[Typ] = macro Impl.strict[Typ, Composition]
-  def of[Type]: Schema[Type] = macro Impl.strictOf[Type]
-}
+
+//object StrictSchema {
+//  def apply[Typ, Composition](schema: Schema[Composition]): Schema[Typ] = macro Impl.strict[Typ, Composition]
+//  def of[Type]: Schema[Type] = macro Impl.strictOf[Type]
+//}
 
 object Impl {
-
-  def simple[Typ: c.WeakTypeTag, Composition: c.WeakTypeTag](c: blackbox.Context)(schema: c.Expr[Schema[Composition]]): c.Expr[Schema[Typ]] = {
+  def simple[Typ <: Product: c.WeakTypeTag, Composition: c.WeakTypeTag, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
+    c: blackbox.Context
+  )(
+    schema: c.Expr[Schema.Aux[Composition, OwnInterpreter]]
+  ): c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]] = {
     import c.universe._
 
-    def isProduct(typ: Type): Boolean =
-      typ <:< typeOf[Product]
+      def isProduct(typ: Type): Boolean =
+        typ <:< typeOf[Product]
 
-    def isCoproduct(symbol: Symbol): Boolean =
-      symbol.asClass.knownDirectSubclasses.nonEmpty && symbol.asClass.knownDirectSubclasses.forall(symbol =>
-        symbol.isType && (isProduct(symbol.asType.toType) || isCoproduct(symbol)))
+      def isCoproduct(symbol: Symbol): Boolean =
+        symbol.asClass.knownDirectSubclasses.nonEmpty && symbol.asClass.knownDirectSubclasses.forall(symbol =>
+          symbol.isType && (isProduct(symbol.asType.toType) || isCoproduct(symbol)))
 
-    def abort(error: String): Nothing =
-      c.abort(c.enclosingPosition, error)
+      def abort(error: String): Nothing =
+        c.abort(c.enclosingPosition, error)
 
     val typTag = implicitly[c.WeakTypeTag[Typ]]
     val compositionTag = implicitly[c.WeakTypeTag[Composition]]
+    val own = implicitly[c.WeakTypeTag[OwnInterpreter[Id]]]
+
+    type Id[A] = A
+    println("@@@@@@@@@@     " + own.tpe.typeConstructor.dealias.typeSymbol)
+    println("@@@@@@@@@@     " + typTag.tpe.dealias)
+    println("@@@@@@@@@@     " + compositionTag.tpe.dealias)
 
     if (isProduct(typTag.tpe)) {
-
-      def buildParts(part: Type): List[Type] = {
-        val args = part.typeArgs
-        if (!(part.typeConstructor =:= typeOf[(_, _)].typeConstructor) || args.isEmpty) List(part)
-        else buildParts(args(1)) :+ args.head
-      }
+        def buildParts(part: Type): List[Type] = {
+          val args = part.typeArgs
+          if (!(part.typeConstructor =:= typeOf[(_, _)].typeConstructor) || args.isEmpty) List(part)
+          else buildParts(args(1)) :+ args.head
+        }
+        def findApply(): Option[Symbol] = {
+          val maybeCompanionApply = typTag.tpe.companion.decl(TermName("apply"))
+          if (maybeCompanionApply == NoSymbol) {
+            val maybeSelfApply = typTag.tpe.decl(TermName("apply"))
+            if (maybeSelfApply == NoSymbol)
+              None
+            else
+              Some(maybeSelfApply)
+          }
+          else
+            Some(maybeCompanionApply)
+        }
       val parts = buildParts(compositionTag.tpe)
 
       val fieldsTypes = typTag.tpe.decls.sorted.collect {
@@ -108,80 +139,48 @@ object Impl {
       if (missingParts.nonEmpty)
         abort(s"missing schemas for types ${missingParts.mkString(", ")} to build a schema for ${typTag.tpe.typeSymbol.name}")
 
-      val typApply = typTag.tpe.companion.decl(TermName("apply")).alternatives.headOption.getOrElse(
-        abort(s"No apply function found for type ${typTag.tpe.typeSymbol.name}")
-      )
-      val variableNames = typApply.asMethod.paramLists.flatten
-      val variables = variableNames match {
-          case List(_) => List("tupled")
-          case list => (1 until list.length).flatMap(value => {
-            val prefix = "tupled" + ("._1" * (list.length - (value + 1)))
-            List(
-              s"$prefix._1",
-              s"$prefix._2",
-            )
-          })
-        }
-
-      val tupledClause = {
-        val acessedVariables = variableNames.map(name => s"typ.${name.name.decodedName.toString}")
-        acessedVariables.tail match {
-          case Nil => acessedVariables.head
-          case tail => ("(" * (variableNames.length - 1)) + acessedVariables.head + tail.mkString(start = ", ", sep = "), ", end = ")")
-      }}
-
-      c.Expr[Schema[Typ]](q"""
-        import scala.language.higherKinds
-        new io.github.methrat0n.restruct.schema.Schema[${typTag.tpe.typeSymbol}] {
-          def bind[FORMAT[_]](algebra: io.github.methrat0n.restruct.core.data.schema.FieldAlgebra[FORMAT]): FORMAT[${typTag.tpe.typeSymbol}] = {
-            algebra.imap($schema.bind(algebra))(tupled =>
-              ${c.parse(s"${typTag.tpe.typeSymbol.name.decodedName.toString}(${variables.mkString(",")})")}
-            )(typ =>
-              ${c.parse(tupledClause)}
-            )
-          }
-        }
+      findApply().orElse(abort(s"No apply function found for type ${typTag.tpe.typeSymbol.name}"))
+      c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]](q"""
+        $schema.inmap(${typTag.tpe.typeSymbol}.apply _ tupled)(${typTag.tpe.typeSymbol}.unapply _ andThen (_.get))
       """)
     }
     else if (isCoproduct(typTag.tpe.typeSymbol)) {
 
-      def buildParts(part: Type): List[Type] = {
-        val args = part.typeArgs
-        if (!(part.typeConstructor =:= typeOf[Either[_, _]].typeConstructor) || args.isEmpty) List(part)
-        else buildParts(args(1)) :+ args.head
-      }
+        def buildParts(part: Type): List[Type] = {
+          val args = part.typeArgs
+          if (!(part.typeConstructor =:= typeOf[Either[_, _]].typeConstructor) || args.isEmpty) List(part)
+          else buildParts(args(1)) :+ args.head
+        }
       val parts = buildParts(compositionTag.tpe)
 
       val typSubtypes = typTag.tpe.typeSymbol.asClass.knownDirectSubclasses.map(childClass => childClass.asType.toType)
 
-      if(typSubtypes.isEmpty)
+      if (typSubtypes.isEmpty)
         abort(s"sealed trait ${typTag.tpe.typeSymbol.name} has no subclass")
 
       val partsNotInTypCoproduct = parts.filterNot(typSubtypes.contains)
-      if(partsNotInTypCoproduct.nonEmpty)
+      if (partsNotInTypCoproduct.nonEmpty)
         abort(s"types ${partsNotInTypCoproduct.mkString(",")} aren't subtypes of ${typTag.tpe.typeSymbol.name.decodedName.toString}")
 
       val missingParts = typSubtypes.filterNot(parts.contains)
-      if(missingParts.nonEmpty)
+      if (missingParts.nonEmpty)
         abort(s"missing schemas for types ${missingParts.mkString(",")} to build a schema for ${typTag.tpe.typeSymbol.name.decodedName.toString}")
 
       val eitherCases =
         parts.indices.map(index =>
-          if(index == parts.length - 1)
+          if (index == parts.length - 1)
             "case " + "Left(" * index + "value" + ")" * index + " => value "
           else
-            "case " + "Left(" * index + "Right(value)" + ")" * index + " => value "
-        )
+            "case " + "Left(" * index + "Right(value)" + ")" * index + " => value ")
 
       val typCases =
         parts.indices.map(index =>
-          if(index == parts.length - 1)
+          if (index == parts.length - 1)
             s"case value: ${parts(index).typeSymbol.name.decodedName.toString} => " + "Left(" * index + "value" + ") " * index
           else
-            s"case value: ${parts(index).typeSymbol.name.decodedName.toString} => " + "Left(" * index + "Right(value)" + ") " * index
-        )
+            s"case value: ${parts(index).typeSymbol.name.decodedName.toString} => " + "Left(" * index + "Right(value)" + ") " * index)
 
-      c.Expr[Schema[Typ]](q"""
+      c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]](q"""
         import scala.language.higherKinds
         new io.github.methrat0n.restruct.schema.Schema[${typTag.tpe.typeSymbol}] {
           def bind[FORMAT[_]](algebra: io.github.methrat0n.restruct.core.data.schema.FieldAlgebra[FORMAT]): FORMAT[${typTag.tpe.typeSymbol}] = {
@@ -201,6 +200,7 @@ object Impl {
     }
   }
 
+  /*
   def strict[Typ: c.WeakTypeTag, Composition: c.WeakTypeTag](c: blackbox.Context)(schema: c.Expr[Schema[Composition]]): c.Expr[Schema[Typ]] = {
     import c.universe._
 
@@ -432,4 +432,5 @@ object Impl {
       )
     }
   }
-}*/
+  */
+}
