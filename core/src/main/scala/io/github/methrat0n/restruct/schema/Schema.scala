@@ -5,13 +5,10 @@ import java.time.{ LocalDate, LocalTime, ZonedDateTime }
 import io.github.methrat0n.restruct.constraints.Constraint
 import io.github.methrat0n.restruct.schema.Schemas._
 
-import language.implicitConversions
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
-trait Schema[Type] { self =>
-
-  type InternalInterpreter[Format[_]] <: Interpreter[Format, Type]
+trait Schema[Type, InternalInterpreter[Format[_]] <: Interpreter[Format, Type]] { self =>
 
   def bind[Format[_]](implicit interpreter: InternalInterpreter[Format]): Format[Type]
 
@@ -19,39 +16,29 @@ trait Schema[Type] { self =>
     ConstrainedSchema[Type, InternalInterpreter](self, constraint)
 
   def and[B, BInterpreter[Format[_]] <: Interpreter[Format, B]](
-    schema: Schema.Aux[B, BInterpreter]
+    schema: Schema[B, BInterpreter]
   ): And[Type, B, InternalInterpreter, BInterpreter] =
     And[Type, B, InternalInterpreter, BInterpreter](self, schema)
 
   def or[B, BInterpreter[Format[_]] <: Interpreter[Format, B]](
-    schema: Schema.Aux[B, BInterpreter]
+    schema: Schema[B, BInterpreter]
   ): Or[Type, B, InternalInterpreter, BInterpreter] =
     Or[Type, B, InternalInterpreter, BInterpreter](self, schema)
 
   def inmap[B](f: Type => B)(g: B => Type): InvariantSchema[Type, B, InternalInterpreter] =
-    InvariantSchema[Type, B, InternalInterpreter](self.asInstanceOf[Schema.Aux[Type, InternalInterpreter]], f, g)
+    InvariantSchema[Type, B, InternalInterpreter](self, f, g)
 }
 
 object Schema extends LowPriorityImplicits {
 
-  type Aux[Type, InternalInterpreter0[Format[_]] <: Interpreter[Format, Type]] = Schema[Type] { type InternalInterpreter[F[_]] = InternalInterpreter0[F] }
+  def apply[Type <: Product]: ApplySchemeInferer[Type] = new ApplySchemeInferer[Type]
 
-  object Aux {
-    implicit def toAux[Type](schema: Schema[Type]): Schema.Aux[Type, schema.InternalInterpreter] = schema
+  final class ApplySchemeInferer[Type <: Product] {
+    def apply[Typ <: Type, Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
+      schema: Schema[Composition, OwnInterpreter]
+    ): InvariantSchema[Composition, Type, OwnInterpreter] = macro Impl.simple[Type, Composition, OwnInterpreter]
   }
-  implicit def fromAux[Type, Interpret[Format[_]] <: Interpreter[Format, Type]](schema: Schema.Aux[Type, Interpret]): Schema[Type] = schema
 
-  def apply[Type <: Product, Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
-    schema: Schema.Aux[Composition, OwnInterpreter]
-  ): InvariantSchema[Composition, Type, OwnInterpreter] = macro Impl.simple[Type, Composition, OwnInterpreter]
-
-  //  def apply[Type <: Product]: ApplySchemeInferer[Type] = new ApplySchemeInferer[Type]
-  //
-  //  final class ApplySchemeInferer[Type] {
-  //    def apply[Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
-  //      schema: Schema.Aux[Composition, OwnInterpreter]
-  //    ): InvariantSchema[Composition, Type, OwnInterpreter] = macro Impl.simple[Composition, OwnInterpreter]
-  //  }
 }
 
 private[schema] trait LowPriorityImplicits {
@@ -61,7 +48,7 @@ private[schema] trait LowPriorityImplicits {
   final class ManySchemeInferer[Type, Collection[A] <: Iterable[A]] {
     def apply[TypeInterpreter[Format[_]] <: Interpreter[Format, Type]]()(
       implicit
-      schema: Schema.Aux[Type, TypeInterpreter]
+      schema: Schema[Type, TypeInterpreter]
     ): ManySchema[Collection, Type, TypeInterpreter] =
       new ManySchema[Collection, Type, TypeInterpreter](schema)
   }
@@ -84,7 +71,7 @@ object Impl {
   def simple[Typ <: Product: c.WeakTypeTag, Composition: c.WeakTypeTag, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
     c: blackbox.Context
   )(
-    schema: c.Expr[Schema.Aux[Composition, OwnInterpreter]]
+    schema: c.Expr[Schema[Composition, OwnInterpreter]]
   ): c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]] = {
     import c.universe._
 
@@ -100,12 +87,6 @@ object Impl {
 
     val typTag = implicitly[c.WeakTypeTag[Typ]]
     val compositionTag = implicitly[c.WeakTypeTag[Composition]]
-    val own = implicitly[c.WeakTypeTag[OwnInterpreter[Id]]]
-
-    type Id[A] = A
-    println("@@@@@@@@@@     " + own.tpe.typeConstructor.dealias.typeSymbol)
-    println("@@@@@@@@@@     " + typTag.tpe.dealias)
-    println("@@@@@@@@@@     " + compositionTag.tpe.dealias)
 
     if (isProduct(typTag.tpe)) {
         def buildParts(part: Type): List[Type] = {
@@ -139,10 +120,34 @@ object Impl {
       if (missingParts.nonEmpty)
         abort(s"missing schemas for types ${missingParts.mkString(", ")} to build a schema for ${typTag.tpe.typeSymbol.name}")
 
-      findApply().orElse(abort(s"No apply function found for type ${typTag.tpe.typeSymbol.name}"))
-      c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]](q"""
-        $schema.inmap(${typTag.tpe.typeSymbol}.apply _ tupled)(${typTag.tpe.typeSymbol}.unapply _ andThen (_.get))
-      """)
+      val apply = findApply().getOrElse(abort(s"No apply function found for type ${typTag.tpe.typeSymbol.name}"))
+
+      val variableNames = apply.asMethod.paramLists.flatten
+      val variables = variableNames match {
+        case List(_) => List("tupled")
+        case list => (1 until list.length).flatMap(value => {
+          val prefix = "tupled" + ("._1" * (list.length - (value + 1)))
+          List(
+            s"$prefix._1",
+            s"$prefix._2",
+          )
+        })
+      }
+
+      val tupledClause = {
+        val acessedVariables = variableNames.map(name => s"typ.${name.name.decodedName.toString}")
+        acessedVariables.tail match {
+          case Nil => acessedVariables.head
+          case tail => ("(" * (variableNames.length - 1)) + acessedVariables.head + tail.mkString(start = ", ", sep = "), ", end = ")")
+        }}
+
+      c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]](q"""{
+        $schema.inmap(tupled =>
+          ${c.parse(s"${typTag.tpe.typeSymbol.name.decodedName.toString}(${variables.mkString(",")})")}
+        )(typ =>
+          ${c.parse(tupledClause)}
+        )
+      }""")
     }
     else if (isCoproduct(typTag.tpe.typeSymbol)) {
 

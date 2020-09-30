@@ -8,7 +8,6 @@ lazy val scalaReflect = Def.setting { "org.scala-lang" % "scala-reflect" % Setti
 lazy val core = (project in file("./core"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies += scalaReflect.value)
-  .settings(libraryDependencies ++= coreDependencies)
   .settings(scalacOptions += "-language:higherKinds")
   .settings(name := "restruct-core")
 
@@ -87,10 +86,6 @@ lazy val examples = (project in file("./examples"))
 lazy val commonSettings =
   Settings.scala.commonSettings ++
   scalariformCommonSettings
-
-lazy val coreDependencies = Seq(
-  Dependencies.test.scalaTest
-)
 
 lazy val playJsonDependencies = Seq(
   Dependencies.json.play

@@ -23,20 +23,15 @@ final case class PathCon[PreviousSteps <: Path, Step](previousSteps: PreviousSte
   final class ManySchemeInferer[Type, Collection[A] <: Iterable[A]] {
     def apply[TypeInterpreter[Format[_]] <: Interpreter[Format, Type]]()(
       implicit
-      schema: Schema.Aux[Type, TypeInterpreter]
+      schema: Schema[Type, TypeInterpreter]
     ): RequiredField[PreviousSteps \ Step, Collection[Type], λ[Format[_] => ManyInterpreter[Format, Type, Collection, TypeInterpreter[Format]]]] =
-      RequiredField(
-        self,
-        new ManySchema[Collection, Type, TypeInterpreter](schema)
-          .asInstanceOf[Schema.Aux[Collection[Type], λ[Format[_] => ManyInterpreter[Format, Type, Collection, TypeInterpreter[Format]]]]],
-        None
-      )
+      RequiredField(self, new ManySchema[Collection, Type, TypeInterpreter](schema), None)
   }
 
   final class SchemeInferer[Type] {
     def apply[TypeInterpreter[Format[_]] <: Interpreter[Format, Type]]()(
       implicit
-      schema: Schema.Aux[Type, TypeInterpreter]
+      schema: Schema[Type, TypeInterpreter]
     ): RequiredField[PreviousSteps \ Step, Type, TypeInterpreter] =
       RequiredField(self, schema, None)
   }
@@ -44,7 +39,7 @@ final case class PathCon[PreviousSteps <: Path, Step](previousSteps: PreviousSte
   final class OptionalSchemeInfere[Type] {
     def apply[TypeInterpreter[Format[_]] <: Interpreter[Format, Type]]()(
       implicit
-      schema: Schema.Aux[Type, TypeInterpreter]
+      schema: Schema[Type, TypeInterpreter]
     ): OptionalField[PreviousSteps \ Step, Type, TypeInterpreter] =
       OptionalField[PreviousSteps \ Step, Type, TypeInterpreter](self, schema, None)
   }

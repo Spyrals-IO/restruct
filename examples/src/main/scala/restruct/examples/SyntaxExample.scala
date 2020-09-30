@@ -68,10 +68,8 @@ sealed trait User extends Product with Serializable
 
 final case class GoodUser(name: String, age: Int) extends User
 
-import scala.language.postfixOps
-
 object GoodUser {
-  implicit val schema: Schema[GoodUser] = Schema(
+  implicit val schema = Schema[GoodUser](
     (Path \ "name").as[String]() and
       (Path \ "age").as[Int]()
   )
@@ -90,7 +88,7 @@ object GoodUser {
 final case class BadUser(name: String, age: Int) extends User
 
 object BadUser {
-  implicit val schema: Schema[BadUser] = Schema(
+  implicit val schema = Schema[BadUser](
     (Path \ "name").as[String]() and
       (Path \ "age").as[Int]()
   )
@@ -104,13 +102,12 @@ object BadUser {
 final case class WrappedUser(users: List[GoodUser], texts: String)
 
 object WrappedUser {
-  implicit val schema: Schema[WrappedUser] = (
+  implicit val schema = Schema[WrappedUser](
     (Path \ "user").many[GoodUser, List]() and
-    (Path \ "text").as[String]()
-  ).inmap(WrappedUser.apply _ tupled)(WrappedUser.unapply _ andThen (_.get))
+      (Path \ "text").as[String]()
+  )
   implicit val reads: Reads[WrappedUser] = {
     import io.github.methrat0n.restruct.readers.json._
-    import io.github.methrat0n.restruct.schema.Schema._
     schema.bind[Reads]
   }
 }
