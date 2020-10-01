@@ -12,14 +12,14 @@ You can also choose to include only the parts you need.
 
 ```scala
 libraryDependencies ++= Seq(
-  "io.github.methrat0n" %% "restruct-core" % "2.0.0", //for only the internals, no format supported
-  "io.github.methrat0n" %% "restruct-query-string-bindable" % "2.0.0", //for only the play query string format
-  "io.github.methrat0n" %% "restruct-config-loader" % "2.0.0", //for only the play config format
-  "io.github.methrat0n" %% "restruct-play-json" % "2.0.0", //for only play json Format, Writes and Reads
-  "io.github.methrat0n" %% "restruct-play-json-reads" % "2.0.0", //for only play json Reads format
-  "io.github.methrat0n" %% "restruct-play-json-writes" % "2.0.0", //for only play json Writes format
+  "io.github.methrat0n" %% "restruct-core" % "2.1.0", //for only the internals, no format supported
+  "io.github.methrat0n" %% "restruct-query-string-bindable" % "2.1.0", //for only the play query string format
+  "io.github.methrat0n" %% "restruct-config-loader" % "2.1.0", //for only the play config format
+  "io.github.methrat0n" %% "restruct-play-json" % "2.1.0", //for only play json Format, Writes and Reads
+  "io.github.methrat0n" %% "restruct-play-json-reads" % "2.1.0", //for only play json Reads format
+  "io.github.methrat0n" %% "restruct-play-json-writes" % "2.1.0", //for only play json Writes format
 
-  "io.github.methrat0n" %% "restruct-enumeratum" % "2.0.0" //for enumeratum helper
+  "io.github.methrat0n" %% "restruct-enumeratum" % "2.1.0" //for enumeratum helper
 )
 ```
 
@@ -51,10 +51,10 @@ final case class User(name: String, age: Int)
 
 object User {
   //User schema
-  implicit val schema = (
+  implicit val schema = Schema[User](
     (Path \ "name").as[String]() and //Mark 'name' as String
     (Path \ "age").as[Int]() //Mark 'age' as Int
-  ).inmap(User.apply _ tupled)(User.unapply _ andThen(_.get)) //User from and to (String, Int)*
+  )
 
   implicit val writes: Writes[User] = {
     import io.github.methrat0n.restruct.readers.json._ //Implicits to build the Writes instances
@@ -62,8 +62,6 @@ object User {
   }
 }
 ```
-\* The `inmap`call should not be necessary as soon as 2.1.0
-<hr />
 
 #### Reading `User` from query-string and writing `JSON`, in [play](https://www.playframework.com/)
 
@@ -78,10 +76,10 @@ final case class User(name: String, age: Int)
 
 object User {
   //User schema
-  implicit val schema = (
+  implicit val schema = Schema[User](
     (Path \ "name").as[String]() and
     (Path \ "age").as[Int]()
-  ).inmap(User.apply _ tupled)(User.unapply _ andThen(_.get))
+  )
 
   //Json Writer
   implicit val writes: Writes[User] = {
@@ -221,6 +219,20 @@ object User {
 }
 ```
 
+And we can take advantage of a macro to avoid writing
+the inmap for product and coproduct types :
+
+```scala
+final case class User(name: String, age: Int)
+
+object User {
+  implicit val schema = Schema[User](
+    (Path \ "name").as[String]() and
+    (Path \ "age").as[Int]()
+  )
+}
+```
+
 To follow our example, we can derive a `Writes` instance from `schema`
 which will write `JSON` as we describe it in `schema`.
 
@@ -263,13 +275,7 @@ that's how `Restruct` support sealed trait:
 sealed trait Animal
 
 object Animal {
-  implicit val schema = (Cat.schema or Dog.schema).inmap {
-    case Right(cat) => cat
-    case Left(dog) => dog
-  } {
-    case cat: Cat => Right(cat)
-    case dog: Dog => Left(dog)
-  }
+  implicit val schema = Schema[Animal](Cat.schema or Dog.schema)
 }
 
 // Assuming Cat.schema and Dog.schema to be define as seen before
@@ -402,15 +408,11 @@ Let's see an example:
 final case class User(name: String, age: Int)
 
 object User {
-  implicit val schema = (
+  implicit val schema = Schema[User](
     //Note the two level path
     (Path \ "names" \ "firstname").as[String]() and
     (Path \ "age").as[Int]()
-  ).inmap {
-    case (name, age) => User(name, age)
-  } {
-    case User(name, age) => (name, age)
-  }
+  )
 }
 ```
 

@@ -30,8 +30,7 @@ import scala.language.higherKinds
  */
 final case class EnumeratumSchema[E <: EnumEntry, OwnInterpreter[Format[_]] <: SimpleInterpreter[Format, String]](
   enum: Enum[E]
-) extends Schema[E] {
-  override type InternalInterpreter[Format[_]] = InvariantInterpreter[Format, String, E, ConstrainedInterpreter[Format, String, OwnInterpreter[Format]]]
+) extends Schema[E, λ[Format[_] => InvariantInterpreter[Format, String, E, ConstrainedInterpreter[Format, String, OwnInterpreter[Format]]]]] {
   override def bind[Format[_]](implicit interpreter: InvariantInterpreter[Format, String, E, ConstrainedInterpreter[Format, String, OwnInterpreter[Format]]]): Format[E] =
     interpreter.imap(
       interpreter.underlyingInterpreter.verifying(
