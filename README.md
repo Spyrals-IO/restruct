@@ -5,7 +5,7 @@ Write your data model once, derive any new format from it.
 ## Use with sbt
 
 ```scala
-libraryDependencies += "io.github.methrat0n" %% "restruct-all" % "2.0.0"
+libraryDependencies += "io.github.methrat0n" %% "restruct-all" % "2.1.0"
 ```
 
 You can also choose to include only the parts you need.
