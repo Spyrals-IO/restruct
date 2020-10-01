@@ -38,7 +38,6 @@ object Schema extends LowPriorityImplicits {
       schema: Schema[Composition, OwnInterpreter]
     ): InvariantSchema[Composition, Type, OwnInterpreter] = macro Impl.simple[Type, Composition, OwnInterpreter]
   }
-
 }
 
 private[schema] trait LowPriorityImplicits {
@@ -76,7 +75,7 @@ object Impl {
     import c.universe._
 
       def isProduct(typ: Type): Boolean =
-        typ <:< typeOf[Product]
+        typ <:< typeOf[Product] && !typ.typeSymbol.isAbstract
 
       def isCoproduct(symbol: Symbol): Boolean =
         symbol.asClass.knownDirectSubclasses.nonEmpty && symbol.asClass.knownDirectSubclasses.forall(symbol =>
@@ -150,7 +149,6 @@ object Impl {
       }""")
     }
     else if (isCoproduct(typTag.tpe.typeSymbol)) {
-
         def buildParts(part: Type): List[Type] = {
           val args = part.typeArgs
           if (!(part.typeConstructor =:= typeOf[Either[_, _]].typeConstructor) || args.isEmpty) List(part)
@@ -185,18 +183,14 @@ object Impl {
           else
             s"case value: ${parts(index).typeSymbol.name.decodedName.toString} => " + "Left(" * index + "Right(value)" + ") " * index)
 
-      c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]](q"""
+      c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]](q"""{
         import scala.language.higherKinds
-        new io.github.methrat0n.restruct.schema.Schema[${typTag.tpe.typeSymbol}] {
-          def bind[FORMAT[_]](algebra: io.github.methrat0n.restruct.core.data.schema.FieldAlgebra[FORMAT]): FORMAT[${typTag.tpe.typeSymbol}] = {
-            algebra.imap($schema.bind(algebra))(either =>
-              ${c.parse(s"either match { ${eitherCases.mkString("\n")} }")}
-            )(typ =>
-              ${c.parse(s"typ match { ${typCases.mkString("\n")} }")}
-            )
-          }.asInstanceOf[FORMAT[${typTag.tpe.typeSymbol}]]
-        }
-      """) //TODO remove the asInstanceOf
+        $schema.inmap(either =>
+          ${c.parse(s"either match { ${eitherCases.mkString("\n")} }")}
+        )(typ =>
+          ${c.parse(s"typ match { ${typCases.mkString("\n")} }")}
+        )
+      }""")
     }
     else {
       abort(

@@ -113,14 +113,7 @@ object WrappedUser {
 }
 
 object User {
-
-  val schema = (GoodUser.schema or BadUser.schema).inmap {
-    case Right(badUser) => badUser
-    case Left(goodUser) => goodUser
-  } {
-    case badUser: BadUser   => Right(badUser)
-    case goodUser: GoodUser => Left(goodUser)
-  }
+  implicit val schema = Schema[User](GoodUser.schema or BadUser.schema)
 
   //val goodUserAutoSchema = Schema.of[GoodUser]
 
