@@ -28,10 +28,11 @@ import scala.language.higherKinds
  *
  * Notice : It will only work for Format that are Invariant and Constrainable.
  */
-final case class EnumeratumSchema[E <: EnumEntry, InternalInterpreter[Format[_]] <: SimpleInterpreter[Format, String]](
+final case class EnumeratumSchema[E <: EnumEntry, OwnInterpreter[Format[_]] <: SimpleInterpreter[Format, String]](
   enum: Enum[E]
-) extends Schema[E, λ[Format[_] => InvariantInterpreter[Format, String, E, ConstrainedInterpreter[Format, String, InternalInterpreter[Format]]]]] {
-  override def bind[Format[_]](implicit interpreter: InvariantInterpreter[Format, String, E, ConstrainedInterpreter[Format, String, InternalInterpreter[Format]]]): Format[E] =
+) extends Schema[E] {
+  override type InternalInterpreter[Format[_]] = InvariantInterpreter[Format, String, E, ConstrainedInterpreter[Format, String, OwnInterpreter[Format]]]
+  override def bind[Format[_]](implicit interpreter: InvariantInterpreter[Format, String, E, ConstrainedInterpreter[Format, String, OwnInterpreter[Format]]]): Format[E] =
     interpreter.imap(
       interpreter.underlyingInterpreter.verifying(
         interpreter.underlyingInterpreter.originalInterpreter.schema,

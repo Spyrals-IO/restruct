@@ -1,12 +1,11 @@
 package restruct.examples
 
-import io.github.methrat0n.restruct.schema.Path
+import io.github.methrat0n.restruct.schema.{ Path, Schema }
 import play.api.libs.json.{ Format, JsSuccess, Json, Reads }
 import play.api.mvc.QueryStringBindable
 
 object SyntaxExample extends App {
 
-  import io.github.methrat0n.restruct.handlers.json._
   import io.github.methrat0n.restruct.writers.json._
   import play.api.libs.json.Writes
 
@@ -37,7 +36,7 @@ object SyntaxExample extends App {
       |  "name": "merlin",
       |  "age": 24,
       |
-      |  "__type": "Badser"
+      |  "__type": "BadUser"
       |}
     """.stripMargin
 
@@ -69,13 +68,11 @@ sealed trait User extends Product with Serializable
 
 final case class GoodUser(name: String, age: Int) extends User
 
-import scala.language.postfixOps
-
 object GoodUser {
-  implicit val schema = (
+  implicit val schema = Schema[GoodUser](
     (Path \ "name").as[String]() and
-    (Path \ "age").as[Int]()
-  ).inmap(GoodUser.apply _ tupled)(GoodUser.unapply _ andThen (_.get))
+      (Path \ "age").as[Int]()
+  )
 
   implicit val reads: Reads[GoodUser] = {
     import io.github.methrat0n.restruct.readers.json._
@@ -91,13 +88,10 @@ object GoodUser {
 final case class BadUser(name: String, age: Int) extends User
 
 object BadUser {
-  implicit val schema =
-    ((Path \ "name").as[String]() and
-      (Path \ "age").as[Int]()).inmap {
-        case (name, age) => BadUser(name, age)
-      } {
-        case BadUser(name, age) => (name, age)
-      }
+  implicit val schema = Schema[BadUser](
+    (Path \ "name").as[String]() and
+      (Path \ "age").as[Int]()
+  )
 
   implicit val reads: Reads[BadUser] = {
     import io.github.methrat0n.restruct.handlers.json._
@@ -108,10 +102,10 @@ object BadUser {
 final case class WrappedUser(users: List[GoodUser], texts: String)
 
 object WrappedUser {
-  implicit val schema = (
+  implicit val schema = Schema[WrappedUser](
     (Path \ "user").many[GoodUser, List]() and
-    (Path \ "text").as[String]()
-  ).inmap(WrappedUser.apply _ tupled)(WrappedUser.unapply _ andThen (_.get))
+      (Path \ "text").as[String]()
+  )
   implicit val reads: Reads[WrappedUser] = {
     import io.github.methrat0n.restruct.readers.json._
     schema.bind[Reads]
@@ -119,14 +113,7 @@ object WrappedUser {
 }
 
 object User {
-
-  val schema = (GoodUser.schema or BadUser.schema).inmap {
-    case Right(badUser) => badUser
-    case Left(goodUser) => goodUser
-  } {
-    case badUser: BadUser   => Right(badUser)
-    case goodUser: GoodUser => Left(goodUser)
-  }
+  implicit val schema = Schema[User](GoodUser.schema or BadUser.schema)
 
   //val goodUserAutoSchema = Schema.of[GoodUser]
 
