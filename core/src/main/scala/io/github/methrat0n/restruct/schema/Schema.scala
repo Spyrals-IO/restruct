@@ -1,12 +1,12 @@
 package io.github.methrat0n.restruct.schema
 
-import java.time.{ LocalDate, LocalTime, ZonedDateTime }
+import java.time.{LocalDate, LocalTime, ZonedDateTime}
 
 import io.github.methrat0n.restruct.constraints.Constraint
 import io.github.methrat0n.restruct.schema.Schemas._
 
 import scala.language.experimental.macros
-import scala.reflect.macros.blackbox
+import scala.reflect.macros._
 
 trait Schema[Type, InternalInterpreter[Format[_]] <: Interpreter[Format, Type]] { self =>
 
@@ -38,6 +38,25 @@ object Schema extends LowPriorityImplicits {
       schema: Schema[Composition, OwnInterpreter]
     ): InvariantSchema[Composition, Type, OwnInterpreter] = macro Impl.simple[Type, Composition, OwnInterpreter]
   }
+
+  object Strict {
+    def apply[Type <: Product]: ApplySchemeInferer[Type] = new ApplySchemeInferer[Type]
+    final class ApplySchemeInferer[Type <: Product] {
+      def apply[Typ <: Type, Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
+        schema: Schema[Composition, OwnInterpreter]
+      ): Any = macro Impl.defaultStrict[Type, Composition, OwnInterpreter]
+    }
+
+    def withTypeMarker[Type <: Product]: WithTypeMarkerSchemeInferer[Type] = new WithTypeMarkerSchemeInferer[Type]
+    final class WithTypeMarkerSchemeInferer[Type <: Product] {
+      def apply[Typ <: Type, Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
+        schema: Schema[Composition, OwnInterpreter]
+      )(
+        typeMarker: String
+      ): Any = macro Impl.strict[Type, Composition, OwnInterpreter]
+    }
+    //def of[Type]: Schema[Type] = macro Impl.strictOf[Type]
+  }
 }
 
 private[schema] trait LowPriorityImplicits {
@@ -61,19 +80,188 @@ private[schema] trait LowPriorityImplicits {
   implicit def simple[Type <: AnyVal]: SimpleSchema[Type] = new SimpleSchema[Type]
 }
 
-//object StrictSchema {
-//  def apply[Typ, Composition](schema: Schema[Composition]): Schema[Typ] = macro Impl.strict[Typ, Composition]
-//  def of[Type]: Schema[Type] = macro Impl.strictOf[Type]
-//}
-
 object Impl {
-  def simple[Typ <: Product: c.WeakTypeTag, Composition: c.WeakTypeTag, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
+  def simple[Typ <: Product, Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
     c: blackbox.Context
   )(
     schema: c.Expr[Schema[Composition, OwnInterpreter]]
+  )(implicit
+    typTag: c.WeakTypeTag[Typ],
+    compositionTag: c.WeakTypeTag[Composition]
   ): c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]] = {
     import c.universe._
+    object Utils {
+      def isProduct(typ: Type): Boolean =
+        typ <:< typeOf[Product] && !typ.typeSymbol.isAbstract
 
+      def isCoproduct(symbol: Symbol): Boolean =
+        symbol.asClass.knownDirectSubclasses.nonEmpty && symbol.asClass.knownDirectSubclasses.forall(symbol =>
+          symbol.isType && (isProduct(symbol.asType.toType) || isCoproduct(symbol))
+        )
+
+      def abort(error: String): Nothing =
+        c.abort(c.enclosingPosition, error)
+    }
+    import Utils._
+
+    object ProductCase {
+
+      def buildParts(part: Type): List[Type] = {
+        val args = part.typeArgs
+        if (!(part.typeConstructor =:= typeOf[(_, _)].typeConstructor) || args.isEmpty) List(part)
+        else buildParts(args(1)) :+ args.head
+      }
+
+      def checkCompatibility(parts: List[Type]): Unit = {
+        val fieldsTypes = typTag.tpe.decls.sorted.collect {
+          case m: TermSymbol if m.isVal && m.isCaseAccessor => m.infoIn(typTag.tpe)
+        }
+
+        val partsNotInTyp = parts.filterNot(fieldsTypes.contains)
+        if (partsNotInTyp.nonEmpty)
+          abort(s"types ${partsNotInTyp.mkString(",")} aren't part of ${typTag.tpe.typeSymbol.name}")
+
+        val missingParts = fieldsTypes.filterNot(parts.contains)
+        if (missingParts.nonEmpty)
+          abort(s"missing schemas for types ${missingParts.mkString(", ")} to build a schema for ${typTag.tpe.typeSymbol.name}")
+      }
+
+      def findApply(): Option[Symbol] = {
+        val maybeCompanionApply = typTag.tpe.companion.decl(TermName("apply"))
+        if (maybeCompanionApply == NoSymbol) {
+          val maybeSelfApply = typeTag.tpe.decl(TermName("apply"))
+          if (maybeSelfApply == NoSymbol)
+            None
+          else
+            Some(maybeSelfApply)
+        }
+        else
+          Some(maybeCompanionApply)
+      }
+
+      def listVariables(apply: Symbol): Seq[String] = {
+        val variableNames = apply.asMethod.paramLists.flatten
+        variableNames match {
+          case List(_) => List("tupled")
+          case list => (1 until list.length).flatMap(value => {
+            val prefix = "tupled" + ("._1" * (list.length - (value + 1)))
+            List(
+              s"$prefix._1",
+              s"$prefix._2",
+            )
+          })
+        }
+      }
+
+      def buildTupledClause(apply: Symbol): String = {
+        val variableNames = apply.asMethod.paramLists.flatten
+        val acessedVariables = variableNames.map(name => s"typ.${name.name.decodedName.toString}")
+        acessedVariables.tail match {
+          case Nil => acessedVariables.head
+          case tail => ("(" * (variableNames.length - 1)) + acessedVariables.head + tail.mkString(start = ", ", sep = "), ", end = ")")
+        }
+      }
+    }
+    object CoProductCase {
+
+      def buildParts(part: Type): List[Type] = {
+        val args = part.typeArgs
+        if (!(part.typeConstructor =:= typeOf[Either[_, _]].typeConstructor) || args.isEmpty) List(part)
+        else buildParts(args(1)) :+ args.head
+      }
+
+      def checkCompatibility(parts: List[Type]): Unit = {
+        val typSubtypes = typTag.tpe.typeSymbol.asClass.knownDirectSubclasses.map(childClass => childClass.asType.toType)
+
+        if (typSubtypes.isEmpty)
+          abort(s"sealed trait ${typTag.tpe.typeSymbol.name} has no subclass")
+
+        val partsNotInTypCoproduct = parts.filterNot(typSubtypes.contains)
+        if (partsNotInTypCoproduct.nonEmpty)
+          abort(s"types ${partsNotInTypCoproduct.mkString(",")} aren't subtypes of ${typTag.tpe.typeSymbol.name.decodedName.toString}")
+
+        val missingParts = typSubtypes.filterNot(parts.contains)
+        if (missingParts.nonEmpty)
+          abort(s"missing schemas for types ${missingParts.mkString(",")} to build a schema for ${typTag.tpe.typeSymbol.name.decodedName.toString}")
+      }
+
+      def buildEitherCase(parts: List[Type]): Seq[String] = {
+        parts.indices.map(index =>
+          if (index == parts.length - 1)
+            "case " + "Left(" * index + "value" + ")" * index + " => value "
+          else
+            "case " + "Left(" * index + "Right(value)" + ")" * index + " => value ")
+      }
+
+      def buildTypeCases(parts: List[Type]): Seq[String] = {
+        parts.indices.map(index =>
+          if (index == parts.length - 1)
+            s"case value: ${parts(index).typeSymbol.name.decodedName.toString} => " + "Left(" * index + "value" + ") " * index
+          else
+            s"case value: ${parts(index).typeSymbol.name.decodedName.toString} => " + "Left(" * index + "Right(value)" + ") " * index
+        )
+      }
+    }
+
+    if (isProduct(typTag.tpe)) {
+      import ProductCase._
+      val parts = buildParts(compositionTag.tpe)
+      checkCompatibility(parts)
+      val apply = findApply().getOrElse(abort(s"No apply function found for type ${typeTag.tpe.typeSymbol.name}"))
+      val variables = listVariables(apply)
+      val tupledClause = buildTupledClause(apply)
+      c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]](q"""{
+        $schema.inmap(tupled =>
+          ${c.parse(s"${typTag.tpe.typeSymbol.name.decodedName.toString}(${variables.mkString(",")})")}
+        )(typ =>
+          ${c.parse(tupledClause)}
+        )
+      }""")
+    } else if (isCoproduct(typTag.tpe.typeSymbol)) {
+      import CoProductCase._
+      val parts = buildParts(compositionTag.tpe)
+      checkCompatibility(parts)
+      val eitherCases = buildEitherCase(parts)
+      val typCases = buildTypeCases(parts)
+      c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]](q"""{
+        import scala.language.higherKinds
+        $schema.inmap(either =>
+          ${c.parse(s"either match { ${eitherCases.mkString("\n")} }")}
+        )(typ =>
+          ${c.parse(s"typ match { ${typCases.mkString("\n")} }")}
+        )
+      }""")
+    } else
+      abort(s"Type '${typTag.tpe.typeSymbol.name}' must either be a case class or a sealed trait")
+  }
+
+  def defaultStrict[Typ, Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
+    c: whitebox.Context
+  )(
+    schema: c.Expr[Schema[Composition, OwnInterpreter]]
+  )(implicit
+    typTag: c.WeakTypeTag[Typ],
+    compositionTag: c.WeakTypeTag[Composition]
+  ): c.Expr[Any] = {
+    import c.universe._
+    strict(c)(schema)(c.Expr(q""" "__type" """))(typTag, compositionTag)
+  }
+
+  def strict[Typ, Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
+    c: whitebox.Context
+  )(
+    schema: c.Expr[Schema[Composition, OwnInterpreter]]
+  )(
+    typeMarker: c.Expr[String]
+  )(implicit
+    typTag: c.WeakTypeTag[Typ],
+    compositionTag: c.WeakTypeTag[Composition]
+  ): c.Expr[Any] = {
+    import c.universe._
+    object Utils {
+      def directSubtypes[T](typeTag: WeakTypeTag[T]): Set[Type] = {
+        typeTag.tpe.typeSymbol.asClass.knownDirectSubclasses.map(childClass => childClass.asType.toType)
+      }
       def isProduct(typ: Type): Boolean =
         typ <:< typeOf[Product] && !typ.typeSymbol.isAbstract
 
@@ -83,124 +271,93 @@ object Impl {
 
       def abort(error: String): Nothing =
         c.abort(c.enclosingPosition, error)
+    }
+    import Utils._
 
-    val typTag = implicitly[c.WeakTypeTag[Typ]]
-    val compositionTag = implicitly[c.WeakTypeTag[Composition]]
-
-    if (isProduct(typTag.tpe)) {
-        def buildParts(part: Type): List[Type] = {
-          val args = part.typeArgs
-          if (!(part.typeConstructor =:= typeOf[(_, _)].typeConstructor) || args.isEmpty) List(part)
-          else buildParts(args(1)) :+ args.head
-        }
-        def findApply(): Option[Symbol] = {
-          val maybeCompanionApply = typTag.tpe.companion.decl(TermName("apply"))
-          if (maybeCompanionApply == NoSymbol) {
-            val maybeSelfApply = typTag.tpe.decl(TermName("apply"))
-            if (maybeSelfApply == NoSymbol)
-              None
-            else
-              Some(maybeSelfApply)
-          }
-          else
-            Some(maybeCompanionApply)
-        }
-      val parts = buildParts(compositionTag.tpe)
-
-      val fieldsTypes = typTag.tpe.decls.sorted.collect {
-        case m: TermSymbol if m.isVal && m.isCaseAccessor => m.infoIn(typTag.tpe)
+    object StrictCoproductCase {
+      def buildParts(part: Type): List[Type] = {
+        val args = part.typeArgs
+        if (args.isEmpty) List(part)
+        else buildParts(args(1)) :+ args.head
       }
 
-      val partsNotInTyp = parts.filterNot(fieldsTypes.contains)
-      if (partsNotInTyp.nonEmpty)
-        abort(s"types ${partsNotInTyp.mkString(",")} aren't part of ${typTag.tpe.typeSymbol.name}")
+      def buildSubSchemas(schema: Tree): List[Tree] = {
+        schema match {
+          case q"$sub.or[$typ, $_]($subs)" => List(sub.asInstanceOf[Tree]) ++ buildSubSchemas(subs.asInstanceOf[Tree])
+          case q"$sub" => List(sub.asInstanceOf[Tree])
+        }
+      }
 
-      val missingParts = fieldsTypes.filterNot(parts.contains)
-      if (missingParts.nonEmpty)
-        abort(s"missing schemas for types ${missingParts.mkString(", ")} to build a schema for ${typTag.tpe.typeSymbol.name}")
+      def checkCompatibility(subSchemas: List[Tree], parts: List[Type], typSubtypes: Set[Type]): Unit = {
+        if(typSubtypes.isEmpty)
+          abort(s"sealed trait ${typTag.tpe.typeSymbol.name} has no subclass")
 
-      val apply = findApply().getOrElse(abort(s"No apply function found for type ${typTag.tpe.typeSymbol.name}"))
+        val partsNotInTypCoproduct = parts.filterNot(typSubtypes.contains)
+        if(partsNotInTypCoproduct.nonEmpty)
+          abort(s"types ${partsNotInTypCoproduct.mkString(",")} aren't subtypes of ${typTag.tpe.typeSymbol.name.decodedName.toString}")
 
-      val variableNames = apply.asMethod.paramLists.flatten
-      val variables = variableNames match {
-        case List(_) => List("tupled")
-        case list => (1 until list.length).flatMap(value => {
-          val prefix = "tupled" + ("._1" * (list.length - (value + 1)))
-          List(
-            s"$prefix._1",
-            s"$prefix._2",
-          )
+        val missingParts = typSubtypes.filterNot(parts.contains)
+        if(missingParts.nonEmpty)
+          abort(s"missing schemas for types ${missingParts.mkString(",")} to build a schema for ${typTag.tpe.typeSymbol.name.decodedName.toString}")
+
+        if(subSchemas.length != parts.length)
+          abort("Incoherent call: The number of found schema is different than the number of type in Composition")
+      }
+
+      def buildEitherCases(parts: List[Type]): Seq[String] = {
+        parts.indices.map(index =>
+          if(index == parts.length - 1)
+            "case " + "Left(" * index + "(value, _)" + ")" * index + " => value "
+          else
+            "case " + "Left(" * index + "Right((value, _))" + ")" * index + " => value "
+        )
+      }
+
+      def buildTypCases(parts: List[Type]): Seq[String]= {
+        parts.indices.map(index => {
+          val typName = parts(index).typeSymbol.name.decodedName.toString
+          if(index == parts.length - 1)
+            s"case value: $typName => " + "Left(" * index + s"""(value, "$typName")""" + ") " * index
+          else
+            s"case value: $typName => " + "Left(" * index + s"""Right((value, "$typName"))""" + ") " * index
         })
       }
-
-      val tupledClause = {
-        val acessedVariables = variableNames.map(name => s"typ.${name.name.decodedName.toString}")
-        acessedVariables.tail match {
-          case Nil => acessedVariables.head
-          case tail => ("(" * (variableNames.length - 1)) + acessedVariables.head + tail.mkString(start = ", ", sep = "), ", end = ")")
-        }}
-
-      c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]](q"""{
-        $schema.inmap(tupled =>
-          ${c.parse(s"${typTag.tpe.typeSymbol.name.decodedName.toString}(${variables.mkString(",")})")}
-        )(typ =>
-          ${c.parse(tupledClause)}
-        )
-      }""")
     }
-    else if (isCoproduct(typTag.tpe.typeSymbol)) {
-        def buildParts(part: Type): List[Type] = {
-          val args = part.typeArgs
-          if (!(part.typeConstructor =:= typeOf[Either[_, _]].typeConstructor) || args.isEmpty) List(part)
-          else buildParts(args(1)) :+ args.head
-        }
+
+    if (isCoproduct(typTag.tpe.typeSymbol)) {
+      import StrictCoproductCase._
+      val subSchemas = buildSubSchemas(schema.tree)
       val parts = buildParts(compositionTag.tpe)
 
-      val typSubtypes = typTag.tpe.typeSymbol.asClass.knownDirectSubclasses.map(childClass => childClass.asType.toType)
+      val typSubtypes = directSubtypes[Typ](typTag)
+      checkCompatibility(subSchemas, parts, typSubtypes)
 
-      if (typSubtypes.isEmpty)
-        abort(s"sealed trait ${typTag.tpe.typeSymbol.name} has no subclass")
+      val reverseParts = parts.reverse //declaration order
+      val rewrittenSchema = subSchemas
+      .zip(reverseParts)
+      .tail.foldLeft(
+        q"""${subSchemas.head}.and((Path \ $typeMarker).as[String]().constraintedBy(io.github.methrat0n.restruct.constraints.Constraints.Equal[String](${reverseParts.head.typeSymbol.name.decodedName.toString})))"""
+      ){
+        case (acc, (sub, part)) => q"""$acc or $sub.and((Path \ $typeMarker).as[String]().constraintedBy(io.github.methrat0n.restruct.constraints.Constraints.Equal[String](${part.typeSymbol.name.decodedName.toString})))"""
+      }
 
-      val partsNotInTypCoproduct = parts.filterNot(typSubtypes.contains)
-      if (partsNotInTypCoproduct.nonEmpty)
-        abort(s"types ${partsNotInTypCoproduct.mkString(",")} aren't subtypes of ${typTag.tpe.typeSymbol.name.decodedName.toString}")
+      val eitherCases = buildEitherCases(parts)
+      val typCases = buildTypCases(parts)
 
-      val missingParts = typSubtypes.filterNot(parts.contains)
-      if (missingParts.nonEmpty)
-        abort(s"missing schemas for types ${missingParts.mkString(",")} to build a schema for ${typTag.tpe.typeSymbol.name.decodedName.toString}")
-
-      val eitherCases =
-        parts.indices.map(index =>
-          if (index == parts.length - 1)
-            "case " + "Left(" * index + "value" + ")" * index + " => value "
-          else
-            "case " + "Left(" * index + "Right(value)" + ")" * index + " => value ")
-
-      val typCases =
-        parts.indices.map(index =>
-          if (index == parts.length - 1)
-            s"case value: ${parts(index).typeSymbol.name.decodedName.toString} => " + "Left(" * index + "value" + ") " * index
-          else
-            s"case value: ${parts(index).typeSymbol.name.decodedName.toString} => " + "Left(" * index + "Right(value)" + ") " * index)
-
-      c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]](q"""{
+      c.Expr(q"""{
         import scala.language.higherKinds
-        $schema.inmap(either =>
+        $rewrittenSchema.inmap(either =>
           ${c.parse(s"either match { ${eitherCases.mkString("\n")} }")}
         )(typ =>
           ${c.parse(s"typ match { ${typCases.mkString("\n")} }")}
         )
       }""")
-    }
-    else {
-      abort(
-        s"Type '${typTag.tpe.typeSymbol.name}' must either be a case class or a sealed trait"
-      )
-    }
+    } else
+      abort(s"Type '${typTag.tpe.typeSymbol.name}' must be a sealed trait")
   }
+}
 
-  /*
-  def strict[Typ: c.WeakTypeTag, Composition: c.WeakTypeTag](c: blackbox.Context)(schema: c.Expr[Schema[Composition]]): c.Expr[Schema[Typ]] = {
+  /*def strict[Typ: c.WeakTypeTag, Composition: c.WeakTypeTag](c: blackbox.Context)(schema: c.Expr[Schema[Composition]]): c.Expr[Schema[Typ]] = {
     import c.universe._
 
     def isProduct(typ: Type): Boolean =
@@ -431,5 +588,5 @@ object Impl {
       )
     }
   }
-  */
-}
+
+}*/

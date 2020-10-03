@@ -58,7 +58,7 @@ object SyntaxExample extends App {
     case play.api.libs.json.JsError(errors) => println(errors)
   }
 
-  User.schema.bind[Format].reads(Json.parse(goodUserJson)) match {
+  User.autoSchema.bind[Format].reads(Json.parse(goodUserJson)) match {
     case JsSuccess(value, _)                => println(value)
     case play.api.libs.json.JsError(errors) => println(errors)
   }
@@ -114,8 +114,5 @@ object WrappedUser {
 
 object User {
   implicit val schema = Schema[User](GoodUser.schema or BadUser.schema)
-
-  //val goodUserAutoSchema = Schema.of[GoodUser]
-
-  //val autoSchema = StrictSchema.of[User]
+  val autoSchema = Schema.Strict[User](GoodUser.schema or BadUser.schema)
 }
