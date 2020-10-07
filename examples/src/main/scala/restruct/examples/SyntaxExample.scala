@@ -33,10 +33,9 @@ object SyntaxExample extends App {
   val goodUserJson =
     """
       |{
-      |  "name": "merlin",
       |  "age": 24,
       |
-      |  "__type": "BadUser"
+      |  "__type": "GoodUser"
       |}
     """.stripMargin
 
@@ -70,7 +69,7 @@ final case class GoodUser(name: String, age: Int) extends User
 
 object GoodUser {
   implicit val schema = Schema[GoodUser](
-    (Path \ "name").as[String]() and
+    (Path \ "name").as[String]().defaultTo("meth") and
       (Path \ "age").as[Int]()
   )
 
