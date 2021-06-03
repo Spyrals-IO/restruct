@@ -36,15 +36,29 @@ object Schema extends LowPriorityImplicits {
    *
    * Example:
    * {{{
-   *   final case class User(name: String, age: Int)
-   *   object User {
-   *      // both equivalent
-   *     implicit val schema = Schema.of(User)
+   *   sealed trait User
    *
-   *     implicit val schema = Schema(
+   *   final case class SadUser(money: Int) extends User
+   *   object EmptyUser {
+   *     implicit val schema = Schema.of[EmptyUser]
+   *   }
+   *
+   *   final case class SimpleUser(name: String, age: Int) extends User
+   *   object SimpleUser {
+   *      // both equivalent
+   *     implicit val schema = Schema.of[SimpleUser]
+   *
+   *     implicit val schema = Schema[SimpleUser](
    *       (Path \ "name").as[String]() and
    *       (Path \ "age").as[Int]()
    *     )
+   *   }
+   *
+   *   object User {
+   *     // both equivalent
+   *     implicit val schema = Schema.of[User]
+   *
+   *     implicit val schema = Schema(SadUser.schema or SimpleUser.schema)
    *   }
    * }}}
    */
@@ -63,7 +77,7 @@ object Schema extends LowPriorityImplicits {
    *     )
    *
    *     // both equivalent
-   *     implicit val schema = Schema(parts)
+   *     implicit val schema = Schema[User](parts)
    *
    *     implicit val schema = parts.inmap {
    *       case (name, age) => User(name, age)
