@@ -1,19 +1,15 @@
 package restruct.examples
 
 import io.github.methrat0n.restruct.schema.{ Path, Schema }
-import play.api.libs.json.{ Format, JsSuccess, Json, Reads }
-import play.api.mvc.QueryStringBindable
+import play.api.libs.json.{ Format, JsSuccess, Json, Reads, Writes }
 
 object SyntaxExample extends App {
 
-  import io.github.methrat0n.restruct.writers.json._
-  import play.api.libs.json.Writes
-
-  val nameSchema = (Path \ "name").as[String]()
-  val nameWrites: Writes[String] = nameSchema.bind[Writes]
+  //    val nameSchema = (Path \ "name").as[String]()
+  //    val nameWrites: Writes[String] = nameSchema.bind[Writes]
 
   val name = "Methrat0n"
-  nameWrites.writes(name)
+  //  nameWrites.writes(name)
 
   val goodJson =
     """
@@ -33,7 +29,7 @@ object SyntaxExample extends App {
   val goodUserJson =
     """
       |{
-      |  "name": "merlin",
+      |  "name": "meth",
       |  "age": 24,
       |
       |  "__type": "BadUser"
@@ -41,7 +37,6 @@ object SyntaxExample extends App {
     """.stripMargin
 
   import io.github.methrat0n.restruct.handlers.json._
-
   GoodUser.schema.bind[Format].reads(Json.parse(goodUserJson)) match {
     case play.api.libs.json.JsSuccess(value, _) => println(value)
     case play.api.libs.json.JsError(errors)     => println(errors)
@@ -58,7 +53,7 @@ object SyntaxExample extends App {
     case play.api.libs.json.JsError(errors) => println(errors)
   }
 
-  User.autoSchema.bind[Format].reads(Json.parse(goodUserJson)) match {
+  User.schema.bind[Format].reads(Json.parse(goodUserJson)) match {
     case JsSuccess(value, _)                => println(value)
     case play.api.libs.json.JsError(errors) => println(errors)
   }
@@ -69,20 +64,21 @@ sealed trait User extends Product with Serializable
 final case class GoodUser(name: String, age: Int) extends User
 
 object GoodUser {
-  implicit val schema = Schema[GoodUser](
-    (Path \ "name").as[String]() and
-      (Path \ "age").as[Int]()
-  )
+  implicit val schema = Schema.of[GoodUser]
+  //    Schema[GoodUser](
+  //    (Path \ "name").as[String]().defaultTo("meth") and
+  //    (Path \ "age").as[Int]()
+  //  )
 
   implicit val reads: Reads[GoodUser] = {
     import io.github.methrat0n.restruct.readers.json._
     schema.bind[Reads]
   }
-
-  implicit val queryStringBindable: QueryStringBindable[GoodUser] = {
-    import io.github.methrat0n.restruct.handlers.queryStringBindable._
-    GoodUser.schema.bind[QueryStringBindable]
-  }
+  //
+  //  implicit val queryStringBindable: QueryStringBindable[GoodUser] = {
+  //    import io.github.methrat0n.restruct.handlers.queryStringBindable._
+  //    GoodUser.schema.bind[QueryStringBindable]
+  //  }
 }
 
 final case class BadUser(name: String, age: Int) extends User
@@ -113,6 +109,6 @@ object WrappedUser {
 }
 
 object User {
-  implicit val schema = Schema[User](GoodUser.schema or BadUser.schema)
-  val autoSchema = Schema.Strict[User](GoodUser.schema or BadUser.schema)
+  //implicit val schema = Schema[User](GoodUser.schema or BadUser.schema)
+  implicit val schema = Schema.Strict.of[User]
 }

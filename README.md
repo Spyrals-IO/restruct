@@ -1,33 +1,36 @@
 # Restruct
 
-Write your data model once, derive any new format from it.
+Write your data model once, derive any data format from it.
 
 ## Use with sbt
 
 ```scala
-libraryDependencies += "io.github.methrat0n" %% "restruct-all" % "2.1.0"
+libraryDependencies += "io.github.methrat0n" %% "restruct-all" % "2.2.0"
 ```
 
 You can also choose to include only the parts you need.
 
 ```scala
 libraryDependencies ++= Seq(
-  "io.github.methrat0n" %% "restruct-core" % "2.1.0", //for only the internals, no format supported
-  "io.github.methrat0n" %% "restruct-query-string-bindable" % "2.1.0", //for only the play query string format
-  "io.github.methrat0n" %% "restruct-config-loader" % "2.1.0", //for only the play config format
-  "io.github.methrat0n" %% "restruct-play-json" % "2.1.0", //for only play json Format, Writes and Reads
-  "io.github.methrat0n" %% "restruct-play-json-reads" % "2.1.0", //for only play json Reads format
-  "io.github.methrat0n" %% "restruct-play-json-writes" % "2.1.0", //for only play json Writes format
+  "io.github.methrat0n" %% "restruct-core" % "2.2.0", //for only the internals, no format supported
+  "io.github.methrat0n" %% "restruct-query-string-bindable" % "2.2.0", //for only the play query string format
+  "io.github.methrat0n" %% "restruct-config-loader" % "2.2.0", //for only the play config format
+  "io.github.methrat0n" %% "restruct-play-json" % "2.2.0", //for only play json Format, Writes and Reads
+  "io.github.methrat0n" %% "restruct-play-json-reads" % "2.2.0", //for only play json Reads format
+  "io.github.methrat0n" %% "restruct-play-json-writes" % "2.2.0", //for only play json Writes format
 
-  "io.github.methrat0n" %% "restruct-enumeratum" % "2.1.0" //for enumeratum helper
+  "io.github.methrat0n" %% "restruct-enumeratum" % "2.2.0" //for enumeratum helper
 )
 ```
 
 ## Motivation
 
-You need an API with an endpoint which accepts bodies in `JSON` and `XML`.
+ - You need an API with an endpoint which accepts bodies in `JSON` and `XML`.
 It always responds `YAML`.
-Without `Restruct` you would have to use three different libraries, learn each one of
+ - You take JSON file from the disk and need to save it into some database.
+ - You compose multiple API and input using different input and need to store / transform the data.
+
+Without `Restruct` you would have to use multiple different libraries, learn each one of
 them and implement their own type classes or structures just to pass the data around.
 
 That is what `Restruct` is about: do not write structures for each format you need,
@@ -279,6 +282,31 @@ object Animal {
 }
 
 // Assuming Cat.schema and Dog.schema to be define as seen before
+```
+
+## Macros
+Writing all the above by hand is awesome and very powerful as you can customize a lot of
+your schemas. Still, it can become cumbersome at time, especially when you just need the minimum
+schema for you type, therefore we made a macro to automate this.
+
+```scala
+...
+implicit val schema = Schema.of[User]
+
+//Equivalent to
+
+implicit val schema = Schema[User](
+  (Path \ "name").as[String]() and
+  (Path \ "age").as[Int]()
+)
+
+...
+
+implicit val schema = Schema.of[Animal]
+
+//Equivalent to
+
+implicit val schema = Schema[Animal](Cat.schema or Dog.schema)
 ```
 
 ## Complex Path

@@ -31,6 +31,62 @@ trait Schema[Type, InternalInterpreter[Format[_]] <: Interpreter[Format, Type]] 
 
 object Schema extends LowPriorityImplicits {
 
+  /**
+   * Automatically derive the Schema of a type.
+   *
+   * Example:
+   * {{{
+   *   sealed trait User
+   *
+   *   final case class SadUser(money: Int) extends User
+   *   object EmptyUser {
+   *     implicit val schema = Schema.of[EmptyUser]
+   *   }
+   *
+   *   final case class SimpleUser(name: String, age: Int) extends User
+   *   object SimpleUser {
+   *      // both equivalent
+   *     implicit val schema = Schema.of[SimpleUser]
+   *
+   *     implicit val schema = Schema[SimpleUser](
+   *       (Path \ "name").as[String]() and
+   *       (Path \ "age").as[Int]()
+   *     )
+   *   }
+   *
+   *   object User {
+   *     // both equivalent
+   *     implicit val schema = Schema.of[User]
+   *
+   *     implicit val schema = Schema(SadUser.schema or SimpleUser.schema)
+   *   }
+   * }}}
+   */
+  def of[Type <: Product]: Any = macro Impl.of[Type]
+
+  /**
+   * Transform a Schema of parts into one of a single type.
+   *
+   * Example:
+   * {{{
+   *   final case class User(name: String, age: Int)
+   *   object User {
+   *     val parts = (
+   *       (Path \ "name").as[String]() and
+   *       (Path \ "age").as[Int]()
+   *     )
+   *
+   *     // both equivalent
+   *     implicit val schema = Schema[User](parts)
+   *
+   *     implicit val schema = parts.inmap {
+   *       case (name, age) => User(name, age)
+   *     } {
+   *       case User(name, age) => (name, age)
+   *     }
+   *   }
+ *   }}}
+   */
   def apply[Type <: Product]: ApplySchemeInferer[Type] = new ApplySchemeInferer[Type]
 
   final class ApplySchemeInferer[Type <: Product] {
@@ -39,14 +95,27 @@ object Schema extends LowPriorityImplicits {
     ): InvariantSchema[Composition, Type, OwnInterpreter] = macro Impl.simple[Type, Composition, OwnInterpreter]
   }
 
+  /**
+   * Strict schemas are only relevant for coproduct as it will make no difference for Products.
+   * Strict schema will include (and therefore read/write) a field to denote the runtime type.
+   */
   object Strict {
+    /**
+     * Equivalent of Schema.apply but for strict schemas.
+     *
+     * use `__type` as default field to stock the type name.
+     */
     def apply[Type <: Product]: ApplySchemeInferer[Type] = new ApplySchemeInferer[Type]
     final class ApplySchemeInferer[Type <: Product] {
       def apply[Typ <: Type, Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
         schema: Schema[Composition, OwnInterpreter]
       ): Any = macro Impl.defaultStrict[Type, Composition, OwnInterpreter]
+      //TODO this macro could be a blackbox by type level computing of the Interpreter
     }
 
+    /**
+     * Equivalent of Strict.apply but let you use a custom field for the type name.
+     */
     def withTypeMarker[Type <: Product]: WithTypeMarkerSchemeInferer[Type] = new WithTypeMarkerSchemeInferer[Type]
     final class WithTypeMarkerSchemeInferer[Type <: Product] {
       def apply[Typ <: Type, Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
@@ -55,7 +124,11 @@ object Schema extends LowPriorityImplicits {
         typeMarker: String
       ): Any = macro Impl.strict[Type, Composition, OwnInterpreter]
     }
-    //def of[Type]: Schema[Type] = macro Impl.strictOf[Type]
+
+    /**
+     * Strict equivalent of Schema.of
+     */
+    def of[Type <: Product]: Any = macro Impl.strictOf[Type]
   }
 }
 
@@ -81,6 +154,12 @@ private[schema] trait LowPriorityImplicits {
 }
 
 object Impl {
+  class MacroSchemeInferer[Type]() {
+    def apply[InternalInterpreter[Format[_]] <: Interpreter[Format, Type]]()(
+      implicit schema: Schema[Type, InternalInterpreter]
+    ): Schema[Type, InternalInterpreter] = schema
+  }
+
   def simple[Typ <: Product, Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
     c: blackbox.Context
   )(
@@ -89,153 +168,77 @@ object Impl {
     typTag: c.WeakTypeTag[Typ],
     compositionTag: c.WeakTypeTag[Composition]
   ): c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]] = {
-    import c.universe._
-    object Utils {
-      def isProduct(typ: Type): Boolean =
-        typ <:< typeOf[Product] && !typ.typeSymbol.isAbstract
+    val helper = new MacroHelper[Typ](c)
+    import helper.Utils._
+    import helper.c.universe._
+    val dimensionalTypTag = typTag.in(helper.c.mirror)
+    val dimensionalCompositionTag = compositionTag.in(helper.c.mirror)
+    val dimensionalSchema = schema.in(helper.c.mirror)
 
-      def isCoproduct(symbol: Symbol): Boolean =
-        symbol.asClass.knownDirectSubclasses.nonEmpty && symbol.asClass.knownDirectSubclasses.forall(symbol =>
-          symbol.isType && (isProduct(symbol.asType.toType) || isCoproduct(symbol))
-        )
+    if (isProduct(dimensionalTypTag.tpe)) {
+      val product = new helper.Product(dimensionalTypTag)
+      import product._
 
-      def abort(error: String): Nothing =
-        c.abort(c.enclosingPosition, error)
-    }
-    import Utils._
-
-    object ProductCase {
-
-      def buildParts(part: Type): List[Type] = {
-        val args = part.typeArgs
-        if (!(part.typeConstructor =:= typeOf[(_, _)].typeConstructor) || args.isEmpty) List(part)
-        else buildParts(args(1)) :+ args.head
-      }
-
-      def checkCompatibility(parts: List[Type]): Unit = {
-        val fieldsTypes = typTag.tpe.decls.sorted.collect {
-          case m: TermSymbol if m.isVal && m.isCaseAccessor => m.infoIn(typTag.tpe)
-        }
-
-        val partsNotInTyp = parts.filterNot(fieldsTypes.contains)
-        if (partsNotInTyp.nonEmpty)
-          abort(s"types ${partsNotInTyp.mkString(",")} aren't part of ${typTag.tpe.typeSymbol.name}")
-
-        val missingParts = fieldsTypes.filterNot(parts.contains)
-        if (missingParts.nonEmpty)
-          abort(s"missing schemas for types ${missingParts.mkString(", ")} to build a schema for ${typTag.tpe.typeSymbol.name}")
-      }
-
-      def findApply(): Option[Symbol] = {
-        val maybeCompanionApply = typTag.tpe.companion.decl(TermName("apply"))
-        if (maybeCompanionApply == NoSymbol) {
-          val maybeSelfApply = typeTag.tpe.decl(TermName("apply"))
-          if (maybeSelfApply == NoSymbol)
-            None
-          else
-            Some(maybeSelfApply)
-        }
-        else
-          Some(maybeCompanionApply)
-      }
-
-      def listVariables(apply: Symbol): Seq[String] = {
-        val variableNames = apply.asMethod.paramLists.flatten
-        variableNames match {
-          case List(_) => List("tupled")
-          case list => (1 until list.length).flatMap(value => {
-            val prefix = "tupled" + ("._1" * (list.length - (value + 1)))
-            List(
-              s"$prefix._1",
-              s"$prefix._2",
-            )
-          })
-        }
-      }
-
-      def buildTupledClause(apply: Symbol): String = {
-        val variableNames = apply.asMethod.paramLists.flatten
-        val acessedVariables = variableNames.map(name => s"typ.${name.name.decodedName.toString}")
-        acessedVariables.tail match {
-          case Nil => acessedVariables.head
-          case tail => ("(" * (variableNames.length - 1)) + acessedVariables.head + tail.mkString(start = ", ", sep = "), ", end = ")")
-        }
-      }
-    }
-    object CoProductCase {
-
-      def buildParts(part: Type): List[Type] = {
-        val args = part.typeArgs
-        if (!(part.typeConstructor =:= typeOf[Either[_, _]].typeConstructor) || args.isEmpty) List(part)
-        else buildParts(args(1)) :+ args.head
-      }
-
-      def checkCompatibility(parts: List[Type]): Unit = {
-        val typSubtypes = typTag.tpe.typeSymbol.asClass.knownDirectSubclasses.map(childClass => childClass.asType.toType)
-
-        if (typSubtypes.isEmpty)
-          abort(s"sealed trait ${typTag.tpe.typeSymbol.name} has no subclass")
-
-        val partsNotInTypCoproduct = parts.filterNot(typSubtypes.contains)
-        if (partsNotInTypCoproduct.nonEmpty)
-          abort(s"types ${partsNotInTypCoproduct.mkString(",")} aren't subtypes of ${typTag.tpe.typeSymbol.name.decodedName.toString}")
-
-        val missingParts = typSubtypes.filterNot(parts.contains)
-        if (missingParts.nonEmpty)
-          abort(s"missing schemas for types ${missingParts.mkString(",")} to build a schema for ${typTag.tpe.typeSymbol.name.decodedName.toString}")
-      }
-
-      def buildEitherCase(parts: List[Type]): Seq[String] = {
-        parts.indices.map(index =>
-          if (index == parts.length - 1)
-            "case " + "Left(" * index + "value" + ")" * index + " => value "
-          else
-            "case " + "Left(" * index + "Right(value)" + ")" * index + " => value ")
-      }
-
-      def buildTypeCases(parts: List[Type]): Seq[String] = {
-        parts.indices.map(index =>
-          if (index == parts.length - 1)
-            s"case value: ${parts(index).typeSymbol.name.decodedName.toString} => " + "Left(" * index + "value" + ") " * index
-          else
-            s"case value: ${parts(index).typeSymbol.name.decodedName.toString} => " + "Left(" * index + "Right(value)" + ") " * index
-        )
-      }
-    }
-
-    if (isProduct(typTag.tpe)) {
-      import ProductCase._
-      val parts = buildParts(compositionTag.tpe)
+      val parts = buildParts(dimensionalCompositionTag.tpe)
       checkCompatibility(parts)
-      val apply = findApply().getOrElse(abort(s"No apply function found for type ${typeTag.tpe.typeSymbol.name}"))
+      val apply = findApply().getOrElse(abort(s"No apply function found for type ${dimensionalTypTag.tpe.typeSymbol.name}"))
       val variables = listVariables(apply)
       val tupledClause = buildTupledClause(apply)
-      c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]](q"""{
-        $schema.inmap(tupled =>
-          ${c.parse(s"${typTag.tpe.typeSymbol.name.decodedName.toString}(${variables.mkString(",")})")}
+
+      val inlining = q"""{
+        $dimensionalSchema.inmap(tupled =>
+          ${helper.c.parse(s"${typTag.tpe.typeSymbol.name.decodedName.toString}(${variables.mkString(",")})")}
         )(typ =>
-          ${c.parse(tupledClause)}
+          ${helper.c.parse(tupledClause)}
         )
-      }""")
-    } else if (isCoproduct(typTag.tpe.typeSymbol)) {
-      import CoProductCase._
-      val parts = buildParts(compositionTag.tpe)
-      checkCompatibility(parts)
-      val eitherCases = buildEitherCase(parts)
-      val typCases = buildTypeCases(parts)
-      c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]](q"""{
+      }"""
+      helper.c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]](inlining)
+        .asInstanceOf[c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]]]
+    } else if (isCoproduct(dimensionalTypTag.tpe)) {
+      val coproduct = new helper.Coproduct(dimensionalTypTag)
+      import coproduct._
+
+      val parts = buildParts(dimensionalCompositionTag.tpe)
+      val subSchemas = buildSubSchemas(dimensionalSchema.tree)
+      val subs = directSubtypes(dimensionalTypTag)
+      checkCompatibility(subSchemas, parts, subs)
+
+      def buildEitherCases(parts: List[Type]): Seq[String] =
+        parts.zipWithIndex.map { case (part, index) =>
+          val typName = part.typeSymbol.name.decodedName.toString
+          if (index == parts.length - 1)
+            "case " + "Left(" * index + s"value: $typName" + ")" * index + " => value "
+          else
+            "case " + "Left(" * index + s"Right(value: $typName)" + ")" * index + " => value "
+        }
+
+      def buildTypCases(parts: List[Type]): Seq[String]=
+        parts.zipWithIndex.map { case (part, index) =>
+          val typName = part.typeSymbol.name.decodedName.toString
+          if(index == parts.length - 1)
+            s"case value: $typName => " + "Left(" * index + "value" + ") " * index
+          else
+            s"case value: $typName => " + "Left(" * index + "Right(value)" + ") " * index
+        }
+
+      val eitherCases = buildEitherCases(parts)
+      val typCases = buildTypCases(parts)
+
+      val inlining = q"""{
         import scala.language.higherKinds
-        $schema.inmap(either =>
-          ${c.parse(s"either match { ${eitherCases.mkString("\n")} }")}
+        $dimensionalSchema.inmap(either =>
+          ${helper.c.parse(s"either match { ${eitherCases.mkString("\n")} }")}
         )(typ =>
-          ${c.parse(s"typ match { ${typCases.mkString("\n")} }")}
+          ${helper.c.parse(s"typ match { ${typCases.mkString("\n")} }")}
         )
-      }""")
+      }"""
+      helper.c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]](inlining)
+        .asInstanceOf[c.Expr[InvariantSchema[Composition, Typ, OwnInterpreter]]]
     } else
       abort(s"Type '${typTag.tpe.typeSymbol.name}' must either be a case class or a sealed trait")
   }
 
-  def defaultStrict[Typ, Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
+  def defaultStrict[Typ <: Product, Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
     c: whitebox.Context
   )(
     schema: c.Expr[Schema[Composition, OwnInterpreter]]
@@ -247,7 +250,7 @@ object Impl {
     strict(c)(schema)(c.Expr(q""" "__type" """))(typTag, compositionTag)
   }
 
-  def strict[Typ, Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
+  def strict[Typ <: Product, Composition, OwnInterpreter[Format[_]] <: Interpreter[Format, Composition]](
     c: whitebox.Context
   )(
     schema: c.Expr[Schema[Composition, OwnInterpreter]]
@@ -257,336 +260,294 @@ object Impl {
     typTag: c.WeakTypeTag[Typ],
     compositionTag: c.WeakTypeTag[Composition]
   ): c.Expr[Any] = {
-    import c.universe._
-    object Utils {
-      def directSubtypes[T](typeTag: WeakTypeTag[T]): Set[Type] = {
-        typeTag.tpe.typeSymbol.asClass.knownDirectSubclasses.map(childClass => childClass.asType.toType)
-      }
-      def isProduct(typ: Type): Boolean =
-        typ <:< typeOf[Product] && !typ.typeSymbol.isAbstract
+    val helper = new MacroHelper[Typ](c)
+    import helper.Utils._
+    import helper.c.universe._
+    val dimensionalTypTag = typTag.in(helper.c.mirror)
+    val dimensionalCompositionTag = compositionTag.in(helper.c.mirror)
+    val dimensionalTypeMarker = typeMarker.in(helper.c.mirror)
 
-      def isCoproduct(symbol: Symbol): Boolean =
-        symbol.asClass.knownDirectSubclasses.nonEmpty && symbol.asClass.knownDirectSubclasses.forall(symbol =>
-          symbol.isType && (isProduct(symbol.asType.toType) || isCoproduct(symbol)))
+    if (isProduct(dimensionalTypTag.tpe))
+      simple[Typ, Composition, OwnInterpreter](c)(schema)(typTag, compositionTag)
+    else if (isCoproduct(dimensionalTypTag.tpe)) {
+      val coproduct = new helper.Coproduct(dimensionalTypTag)
+      import coproduct._
+      val dimensionalSchema = schema.in(helper.c.mirror)
 
-      def abort(error: String): Nothing =
-        c.abort(c.enclosingPosition, error)
-    }
-    import Utils._
+      val subSchemas = buildSubSchemas(dimensionalSchema.tree)
+      val parts = buildParts(dimensionalCompositionTag.tpe)
 
-    object StrictCoproductCase {
-      def buildParts(part: Type): List[Type] = {
-        val args = part.typeArgs
-        if (args.isEmpty) List(part)
-        else buildParts(args(1)) :+ args.head
-      }
-
-      def buildSubSchemas(schema: Tree): List[Tree] = {
-        schema match {
-          case q"$sub.or[$typ, $_]($subs)" => List(sub.asInstanceOf[Tree]) ++ buildSubSchemas(subs.asInstanceOf[Tree])
-          case q"$sub" => List(sub.asInstanceOf[Tree])
-        }
-      }
-
-      def checkCompatibility(subSchemas: List[Tree], parts: List[Type], typSubtypes: Set[Type]): Unit = {
-        if(typSubtypes.isEmpty)
-          abort(s"sealed trait ${typTag.tpe.typeSymbol.name} has no subclass")
-
-        val partsNotInTypCoproduct = parts.filterNot(typSubtypes.contains)
-        if(partsNotInTypCoproduct.nonEmpty)
-          abort(s"types ${partsNotInTypCoproduct.mkString(",")} aren't subtypes of ${typTag.tpe.typeSymbol.name.decodedName.toString}")
-
-        val missingParts = typSubtypes.filterNot(parts.contains)
-        if(missingParts.nonEmpty)
-          abort(s"missing schemas for types ${missingParts.mkString(",")} to build a schema for ${typTag.tpe.typeSymbol.name.decodedName.toString}")
-
-        if(subSchemas.length != parts.length)
-          abort("Incoherent call: The number of found schema is different than the number of type in Composition")
-      }
-
-      def buildEitherCases(parts: List[Type]): Seq[String] = {
-        parts.indices.map(index =>
-          if(index == parts.length - 1)
-            "case " + "Left(" * index + "(value, _)" + ")" * index + " => value "
-          else
-            "case " + "Left(" * index + "Right((value, _))" + ")" * index + " => value "
-        )
-      }
-
-      def buildTypCases(parts: List[Type]): Seq[String]= {
-        parts.indices.map(index => {
-          val typName = parts(index).typeSymbol.name.decodedName.toString
-          if(index == parts.length - 1)
-            s"case value: $typName => " + "Left(" * index + s"""(value, "$typName")""" + ") " * index
-          else
-            s"case value: $typName => " + "Left(" * index + s"""Right((value, "$typName"))""" + ") " * index
-        })
-      }
-    }
-
-    if (isCoproduct(typTag.tpe.typeSymbol)) {
-      import StrictCoproductCase._
-      val subSchemas = buildSubSchemas(schema.tree)
-      val parts = buildParts(compositionTag.tpe)
-
-      val typSubtypes = directSubtypes[Typ](typTag)
+      val typSubtypes = directSubtypes[Typ](dimensionalTypTag)
       checkCompatibility(subSchemas, parts, typSubtypes)
 
       val reverseParts = parts.reverse //declaration order
       val rewrittenSchema = subSchemas
       .zip(reverseParts)
       .tail.foldLeft(
-        q"""${subSchemas.head}.and((Path \ $typeMarker).as[String]().constraintedBy(io.github.methrat0n.restruct.constraints.Constraints.Equal[String](${reverseParts.head.typeSymbol.name.decodedName.toString})))"""
+        q"""${subSchemas.head}.and((Path \ $dimensionalTypeMarker).as[String]().constraintedBy(io.github.methrat0n.restruct.constraints.Constraints.Equal[String](${reverseParts.head.typeSymbol.name.decodedName.toString})))"""
       ){
-        case (acc, (sub, part)) => q"""$acc or $sub.and((Path \ $typeMarker).as[String]().constraintedBy(io.github.methrat0n.restruct.constraints.Constraints.Equal[String](${part.typeSymbol.name.decodedName.toString})))"""
+        case (acc, (sub, part)) => q"""$acc or $sub.and((Path \ $dimensionalTypeMarker).as[String]().constraintedBy(io.github.methrat0n.restruct.constraints.Constraints.Equal[String](${part.typeSymbol.name.decodedName.toString})))"""
       }
+
+      def buildEitherCases(parts: List[Type]): Seq[String] =
+        parts.zipWithIndex.map { case (part, index) =>
+          if (index == parts.length - 1)
+            "case " + "Left(" * index + "(value, _)" + ")" * index + " => value "
+          else
+            "case " + "Left(" * index + "Right((value, _))" + ")" * index + " => value "
+        }
+
+      def buildTypCases(parts: List[Type]): Seq[String]=
+        parts.zipWithIndex.map { case (part, index) =>
+          val typName = part.typeSymbol.name.decodedName.toString
+          if(index == parts.length - 1)
+            s"case value: $typName => " + "Left(" * index + s"""(value, "$typName")""" + ") " * index
+          else
+            s"case value: $typName => " + "Left(" * index + s"""Right((value, "$typName"))""" + ") " * index
+        }
 
       val eitherCases = buildEitherCases(parts)
       val typCases = buildTypCases(parts)
 
-      c.Expr(q"""{
+      val inlining = q"""{
         import scala.language.higherKinds
         $rewrittenSchema.inmap(either =>
-          ${c.parse(s"either match { ${eitherCases.mkString("\n")} }")}
+          ${helper.c.parse(s"either match { ${eitherCases.mkString("\n")} }")}
         )(typ =>
-          ${c.parse(s"typ match { ${typCases.mkString("\n")} }")}
+          ${helper.c.parse(s"typ match { ${typCases.mkString("\n")} }")}
         )
-      }""")
+      }"""
+      helper.c.Expr(inlining).asInstanceOf[c.Expr[Any]]
     } else
       abort(s"Type '${typTag.tpe.typeSymbol.name}' must be a sealed trait")
   }
+
+  def of[Typ](
+    c: whitebox.Context
+  )(implicit
+    typTag: c.WeakTypeTag[Typ]
+  ): c.Expr[Any] = {
+    val helper = new MacroHelper[Typ](c)
+    import helper.Utils._
+    import helper.c.universe._
+    val dimensionalTypTag = typTag.in(helper.c.mirror)
+
+    if(isProduct(dimensionalTypTag.tpe)) {
+      val fieldsTree = dimensionalTypTag.tpe.decls.sorted.collect {
+        //TODO default
+        case m: TermSymbol if m.isVal && m.isCaseAccessor && m.isParamWithDefault => (m.name, m.typeSignature)
+        case m: TermSymbol if m.isVal && m.isCaseAccessor => (m.name, m.typeSignature)
+      } map {
+        case (name, typ) if isOption(typ) =>
+          val internalTyp = typ.typeArgs.head
+          val fieldName = name.decodedName.toString.replaceAll(" ", "")
+          //TODO default
+          q"""
+            (Path \ ${fieldName}).asOption[${internalTyp.typeSymbol}]()
+           """
+        case (name, typ) =>
+          val fieldName = name.decodedName.toString.replaceAll(" ", "")
+          //TODO default
+          q"""
+            (Path \ ${fieldName}).as[${typ.typeSymbol}]()
+           """
+      }
+      val composeFields = fieldsTree.tail.foldLeft(fieldsTree.head)((acc, field) => q"$acc.and($field)")
+
+      val inlining = q"""{
+        import io.github.methrat0n.restruct.schema._
+        Schema.apply[${dimensionalTypTag.tpe}]($composeFields)
+       }"""
+      helper.c.Expr[Any](inlining).asInstanceOf[c.Expr[Any]]
+    } else if(isCoproduct(dimensionalTypTag.tpe)) {
+      val subtypes = directSubtypes(dimensionalTypTag)
+      if(subtypes.isEmpty)
+        abort("Sealed trait without subtype provided")
+
+      def applyMacroSchemeInfere(typ: Type) = q"new io.github.methrat0n.restruct.schema.Impl.MacroSchemeInferer[${typ}].apply()"
+      val compositeSchema = subtypes.tail.foldLeft(applyMacroSchemeInfere(subtypes.head))(
+        (acc, subtype) => q"$acc or ${applyMacroSchemeInfere(subtype)}"
+      )
+
+      val inlining = q"""{
+       import io.github.methrat0n.restruct.schema._
+       Schema.apply[${dimensionalTypTag.tpe}]($compositeSchema)
+      }"""
+      helper.c.Expr(inlining).asInstanceOf[c.Expr[Any]]
+    } else
+      abort(s"Type '${typTag.tpe.typeSymbol.name}' must either be a case class or a sealed trait")
+  }
+
+  def strictOf[Typ](
+    c: whitebox.Context
+  )(implicit
+    typTag: c.WeakTypeTag[Typ]
+  ): c.Expr[Any] = {
+    import c.universe._
+    of[Typ](c)(typTag) match {
+      case c.Expr(q"""{
+        import io.github.methrat0n.restruct.schema._
+        Schema.apply[${tpe}]($composeFields)
+      }""") => c.Expr(q"""{
+        import io.github.methrat0n.restruct.schema._
+        Schema.Strict.apply[${tpe}]($composeFields)
+      }""")
+    }
+  }
+
 }
 
-  /*def strict[Typ: c.WeakTypeTag, Composition: c.WeakTypeTag](c: blackbox.Context)(schema: c.Expr[Schema[Composition]]): c.Expr[Schema[Typ]] = {
-    import c.universe._
+class MacroHelper[Typ](val c: blackbox.Context) {
+  import c.universe._
+
+  object Utils {
+    def directSubtypes[T](typeTag: WeakTypeTag[T]): Set[Type] =
+      typeTag.tpe.typeSymbol.asClass.knownDirectSubclasses.map(childClass => childClass.asType.toType)
 
     def isProduct(typ: Type): Boolean =
-      typ <:< typeOf[Product]
+      typ <:< typeOf[scala.Product] && !typ.typeSymbol.isAbstract
 
-    def isCoproduct(symbol: Symbol): Boolean =
-      symbol.asClass.knownDirectSubclasses.nonEmpty && symbol.asClass.knownDirectSubclasses.forall(symbol =>
-        symbol.isType && (isProduct(symbol.asType.toType) || isCoproduct(symbol)))
+    def isCoproduct(typ: Type): Boolean =
+      typ.typeSymbol.asClass.knownDirectSubclasses.nonEmpty && typ.typeSymbol.asClass.knownDirectSubclasses.forall(symbol =>
+        isProduct(symbol.asType.toType) || isCoproduct(symbol.asType.toType))
 
     def abort(error: String): Nothing =
       c.abort(c.enclosingPosition, error)
 
-    val typTag = implicitly[c.WeakTypeTag[Typ]]
-    val compositionTag = implicitly[c.WeakTypeTag[Composition]]
+    def isOption(typ: Type): Boolean =
+      typ.typeConstructor =:= typeOf[Option[_]].typeConstructor
+
+    //        def defaultsFor(typ: Type,fields: List[(TermName, Type)]) = for {
+    //          ((_, argTpe), i) <- fields.zipWithIndex
+    //          default = typ.companion.member(TermName(s"apply$$default$$${i + 1}")) orElse
+    //            altCompanion.member(TermName(s"$$lessinit$$greater$$default$$${i + 1}"))
+    //        } yield if (default.isTerm) {
+    //          val defaultTpe = appliedType(someTpe, devarargify(argTpe))
+    //          val defaultVal = some(q"$companion.$default")
+    //          (defaultTpe, defaultVal)
+    //        } else (noneTpe, none)
+
+    // See https://github.com/milessabin/shapeless/issues/212
+    //        def companionRef(tpe: Type): Tree = {
+    //          val global = c.universe.asInstanceOf[scala.tools.nsc.Global]
+    //          val gTpe = tpe.asInstanceOf[global.Type]
+    //          val pre = gTpe.prefix
+    //          val cSym = patchedCompanionSymbolOf(tpe.typeSymbol).asInstanceOf[global.Symbol]
+    //          if(cSym != NoSymbol)
+    //            global.gen.mkAttributedRef(pre, cSym).asInstanceOf[Tree]
+    //          else
+    //            Ident(tpe.typeSymbol.name.toTermName) // Attempt to refer to local companion
+    //        }
+  }
+
+  class Product(typTag: c.WeakTypeTag[Typ]) {
+
+    def buildParts(part: Type): List[Type] = {
+      val args = part.typeArgs
+      if (!(part.typeConstructor =:= typeOf[(_, _)].typeConstructor) || args.isEmpty) List(part)
+      else buildParts(args(1)) :+ args.head
+    }
+
+    def checkCompatibility(parts: List[Type]): Unit = {
+      val fieldsTypes = typTag.tpe.decls.sorted.collect {
+        case m: TermSymbol if m.isVal && m.isCaseAccessor => m.infoIn(typTag.tpe)
+      } map { fieldsType => fieldsType.dealias }
+
+      val dealiasParts = parts.map(_.dealias)
+
+      val partsNotInTyp = dealiasParts.filterNot(fieldsTypes.contains)
+      if (partsNotInTyp.nonEmpty)
+        Utils.abort(s"types ${partsNotInTyp.mkString(",")} aren't part of ${typTag.tpe.typeSymbol.name}")
+
+      val missingParts = fieldsTypes.filterNot(dealiasParts.contains)
+      if (missingParts.nonEmpty)
+        Utils.abort(s"missing schemas for types ${missingParts.mkString(", ")} to build a schema for ${typTag.tpe.typeSymbol.name}")
+    }
+
+    def findApply(): Option[Symbol] = {
+      val maybeCompanionApply = typTag.tpe.companion.decl(TermName("apply"))
+      if (maybeCompanionApply == NoSymbol) {
+        val maybeSelfApply = typeTag.tpe.decl(TermName("apply"))
+        if (maybeSelfApply == NoSymbol)
+          None
+        else
+          Some(maybeSelfApply)
+      }
+      else
+        Some(maybeCompanionApply)
+    }
+
+    def listVariables(apply: Symbol): Seq[String] = {
+      val variableNames = apply.asMethod.paramLists.flatten
+      variableNames match {
+        case List(_) => List("tupled")
+        case list => (1 until list.length).flatMap(value => {
+          val prefix = "tupled" + ("._1" * (list.length - (value + 1)))
+          List(
+            s"$prefix._1",
+            s"$prefix._2",
+          )
+        })
+      }
+    }
+
+    def buildTupledClause(apply: Symbol): String = {
+      val variableNames = apply.asMethod.paramLists.flatten
+      val acessedVariables = variableNames.map(name => s"typ.${name.name.decodedName.toString}")
+      acessedVariables.tail match {
+        case Nil => acessedVariables.head
+        case tail => ("(" * (variableNames.length - 1)) + acessedVariables.head + tail.mkString(start = ", ", sep = "), ", end = ")")
+      }
+    }
+  }
+
+  class Coproduct(typTag: c.WeakTypeTag[Typ]) {
 
     def buildParts(part: Type): List[Type] = {
       val args = part.typeArgs
       if (args.isEmpty) List(part)
       else buildParts(args(1)) :+ args.head
     }
-    val parts = buildParts(compositionTag.tpe)
 
-    if (isCoproduct(typTag.tpe.typeSymbol)) {
-      val typSubtypes = typTag.tpe.typeSymbol.asClass.knownDirectSubclasses.map(childClass => childClass.asType.toType)
+    def buildSubSchemas(schema: Tree): List[Tree] = {
+      schema match {
+        case q"$sub.or[$typ, $_]($subs)" => List(sub.asInstanceOf[Tree]) ++ buildSubSchemas(subs.asInstanceOf[Tree])
+        case q"$sub" => List(sub.asInstanceOf[Tree])
+      }
+    }
 
+    def checkCompatibility(subSchemas: List[Tree], parts: List[Type], typSubtypes: Set[Type]): Unit = {
       if(typSubtypes.isEmpty)
-        abort(s"sealed trait ${typTag.tpe.typeSymbol.name} has no subclass")
+        Utils.abort(s"sealed trait ${typTag.tpe.typeSymbol.name} has no subclass")
 
       val partsNotInTypCoproduct = parts.filterNot(typSubtypes.contains)
       if(partsNotInTypCoproduct.nonEmpty)
-        abort(s"types ${partsNotInTypCoproduct.mkString(",")} aren't subtypes of ${typTag.tpe.typeSymbol.name.decodedName.toString}")
+        Utils.abort(s"types ${partsNotInTypCoproduct.mkString(",")} aren't subtypes of ${typTag.tpe.typeSymbol.name.decodedName.toString}")
 
       val missingParts = typSubtypes.filterNot(parts.contains)
       if(missingParts.nonEmpty)
-        abort(s"missing schemas for types ${missingParts.mkString(",")} to build a schema for ${typTag.tpe.typeSymbol.name.decodedName.toString}")
-
-      val eitherCases =
-        parts.indices.map(index =>
-          if(index == parts.length - 1)
-            "case " + "Left(" * index + "(value, _)" + ")" * index + " => value "
-          else
-            "case " + "Left(" * index + "Right((value, _))" + ")" * index + " => value "
-        )
-
-      val typCases =
-        parts.indices.map(index =>
-          if(index == parts.length - 1)
-            s"case value: ${parts(index).typeSymbol.name.decodedName.toString} => " + "Left(" * index + "(value, value.getClass.getSimpleName)" + ") " * index
-          else
-            s"case value: ${parts(index).typeSymbol.name.decodedName.toString} => " + "Left(" * index + "Right((value, value.getClass.getSimpleName))" + ") " * index
-        )
-
-      def buildSubSchemas(schema: Tree): List[Tree] = {
-        schema match {
-          case q"$sub.or[$typ]($subs)" => List(sub.asInstanceOf[Tree]) ++ buildSubSchemas(subs.asInstanceOf[Tree])
-          case q"$sub" => List(sub.asInstanceOf[Tree])
-        }
-      }
-
-      val subSchemas = buildSubSchemas(schema.tree)
+        Utils.abort(s"missing schemas for types ${missingParts.mkString(",")} to build a schema for ${typTag.tpe.typeSymbol.name.decodedName.toString}")
 
       if(subSchemas.length != parts.length)
-        abort("Incoherent call: The number of found schema is different than the number of type in Composition")
+        Utils.abort("Incoherent call: The number of found schema is different than the number of type in Composition")
+    }
 
-      val subsWithFlag = subSchemas.zipWithIndex.map { case (sub, index) =>
-        s"""algebra.product(
-           |$sub.bind(algebra),
-           |io.github.methrat0n.restruct.schema.RequiredField(
-           |  io.github.methrat0n.restruct.core.data.schema.Path(
-           |    io.github.methrat0n.restruct.schema.StepList(
-           |      io.github.methrat0n.restruct.schema.StringStep("__type"),List.empty)
-           |    ),
-           |    io.github.methrat0n.restruct.schema.Syntax.string.constraintedBy(
-           |      io.github.methrat0n.restruct.core.data.constraints.Constraints.EqualConstraint("${parts((parts.length - 1) - index).typeSymbol.name.decodedName.toString}")
-           |    ), None
-           |  ).bind(algebra)
-           |)""".stripMargin
+    def buildEitherCases(parts: List[Type]): Seq[String] =
+      parts.zipWithIndex.map { case (part, index) =>
+        if (index == parts.length - 1)
+          "case " + "Left(" * index + "(value, _)" + ")" * index + " => value "
+        else
+          "case " + "Left(" * index + "Right((value, _))" + ")" * index + " => value "
       }
-      val typName = typTag.tpe.typeSymbol.name.decodedName.toString
-      val restructSchema = subsWithFlag.tail.foldLeft(subsWithFlag.head)((acc, sub) => s"algebra.or($acc,$sub)")
-      c.Expr[Schema[Typ]](c.parse(s"""
-          import scala.language.higherKinds
-          new io.github.methrat0n.restruct.schema.Schema[$typName] {
-            def bind[FORMAT[_]](algebra: io.github.methrat0n.restruct.core.data.schema.FieldAlgebra[FORMAT]): FORMAT[$typName] = {
-              algebra.imap($restructSchema)( either =>
-                either match { ${eitherCases.mkString("\n")} }
-              )((typ: $typName) =>
-                typ match { ${typCases.mkString("\n")} }
-              )
-            }.asInstanceOf[FORMAT[$typName]]
-          }
-        """)) //TODO remove the asInstanceOf
-    }
-    else {
-      abort(
-        s"Type '${typTag.tpe.typeSymbol.name}' must be a sealed trait"
-      )
-    }
-  }
 
-  //The only difference between this two is the apply called at the end.
-  def simpleOf[T: c.WeakTypeTag](c: blackbox.Context): c.Expr[Schema[T]] = {
-    import c.universe._
-
-    def inferSchema(typ: Type): Tree =
-      c.inferImplicitValue(appliedType(typeOf[Schema[_]].typeConstructor, typ), silent = false)
-
-    def isOption(typ: Type): Boolean =
-      typ.typeConstructor =:= typeOf[Option[_]].typeConstructor
-
-    def isProduct(typ: Type): Boolean =
-      typ <:< typeOf[Product]
-
-    def isCoproduct(symbol: Symbol): Boolean =
-      symbol.asClass.knownDirectSubclasses.nonEmpty && symbol.asClass.knownDirectSubclasses.forall(symbol =>
-        symbol.isType && (isProduct(symbol.asType.toType) || isCoproduct(symbol)))
-
-    val tag = implicitly[c.WeakTypeTag[T]]
-    if (isProduct(tag.tpe)) {
-      val fieldsTree = tag.tpe.decls.sorted.collect {
-        case m: TermSymbol if m.isVal && m.isCaseAccessor => (m.name, m.infoIn(tag.tpe))
-      }.map {
-        case (name, typ) if isOption(typ) =>
-          val treeSchema = inferSchema(typ.typeArgs.head)
-          val internalTyp = typ.typeArgs.head
-          val fieldName = name.decodedName.toString.replaceAll(" ", "")
-          q"""
-             io.github.methrat0n.restruct.schema.OptionalField[$internalTyp](
-               io.github.methrat0n.restruct.core.data.schema.Path(
-                 io.github.methrat0n.restruct.schema.StepList(
-                   io.github.methrat0n.restruct.schema.StringStep($fieldName), List.empty
-                 )
-               ), $treeSchema, None
-             )
-          """
-        case (name, typ) =>
-          val treeSchema = inferSchema(typ)
-          val fieldName = name.decodedName.toString.replaceAll(" ", "")
-          q"""
-              io.github.methrat0n.restruct.schema.RequiredField[$typ](
-                io.github.methrat0n.restruct.core.data.schema.Path(
-                  io.github.methrat0n.restruct.schema.StepList(
-                    io.github.methrat0n.restruct.schema.StringStep($fieldName), List.empty
-                  )
-                ), $treeSchema, None
-              )
-          """
+    def buildTypCases(parts: List[Type]): Seq[String]=
+      parts.zipWithIndex.map { case (part, index) =>
+        val typName = part.typeSymbol.name.decodedName.toString
+        if(index == parts.length - 1)
+          s"case value: $typName => " + "Left(" * index + s"""(value, "$typName")""" + ") " * index
+        else
+          s"case value: $typName => " + "Left(" * index + s"""Right((value, "$typName"))""" + ") " * index
       }
-      val composeFields = fieldsTree.tail.foldLeft(fieldsTree.head)((acc, field) => q"$acc.and($field)")
-      val schemaTree = q"io.github.methrat0n.restruct.schema.Schema($composeFields)"
-      c.Expr[Schema[T]](c.untypecheck(schemaTree))
-    }
-    else if (isCoproduct(tag.tpe.typeSymbol)) {
-      val schemas = tag.tpe.typeSymbol.asClass.knownDirectSubclasses.map(childClass => inferSchema(childClass.asType.toType))
-      val composeFields = schemas.tail.foldLeft(schemas.head)((acc, field) => q"$acc.or($field)")
-      val schemaTree = q"io.github.methrat0n.restruct.schema.Schema($composeFields)"
-      c.Expr[Schema[T]](c.untypecheck(schemaTree))
-    }
-    else {
-      c.abort(
-        c.enclosingPosition,
-        s"Type '${tag.tpe.typeSymbol.name}' must either be a Product or a Coproduct"
-      )
-    }
   }
+}
 
-  def strictOf[T: c.WeakTypeTag](c: blackbox.Context): c.Expr[Schema[T]] = {
-    import c.universe._
-
-    def inferSchema(typ: Type): Tree =
-      c.inferImplicitValue(appliedType(typeOf[Schema[_]].typeConstructor, typ), silent = false)
-
-    def isOption(typ: Type): Boolean =
-      typ.typeConstructor =:= typeOf[Option[_]].typeConstructor
-
-    def isProduct(typ: Type): Boolean =
-      typ <:< typeOf[Product]
-
-    def isCoproduct(symbol: Symbol): Boolean =
-      symbol.asClass.knownDirectSubclasses.nonEmpty && symbol.asClass.knownDirectSubclasses.forall(symbol =>
-        symbol.isType && (isProduct(symbol.asType.toType) || isCoproduct(symbol)))
-
-    val tag = implicitly[c.WeakTypeTag[T]]
-    if (isProduct(tag.tpe)) {
-      val fieldsTree = tag.tpe.decls.sorted.collect {
-        case m: TermSymbol if m.isVal && m.isCaseAccessor => (m.name, m.infoIn(tag.tpe))
-      }.map {
-        case (name, typ) if isOption(typ) =>
-          val treeSchema = inferSchema(typ.typeArgs.head)
-          val internalTyp = typ.typeArgs.head
-          val fieldName = name.decodedName.toString.replaceAll(" ", "")
-          q"""
-             io.github.methrat0n.restruct.schema.OptionalField[$internalTyp](
-               io.github.methrat0n.restruct.core.data.schema.Path(
-                 io.github.methrat0n.restruct.schema.StepList(
-                   io.github.methrat0n.restruct.schema.StringStep($fieldName), List.empty
-                 )
-               ), $treeSchema, None
-             )
-          """
-        case (name, typ) =>
-          val treeSchema = inferSchema(typ)
-          val fieldName = name.decodedName.toString.replaceAll(" ", "")
-          q"""
-              io.github.methrat0n.restruct.schema.RequiredField[$typ](
-                io.github.methrat0n.restruct.core.data.schema.Path(
-                  io.github.methrat0n.restruct.schema.StepList(
-                    io.github.methrat0n.restruct.schema.StringStep($fieldName), List.empty
-                  )
-                ), $treeSchema, None
-              )
-          """
-      }
-      val composeFields = fieldsTree.tail.foldLeft(fieldsTree.head)((acc, field) => q"$acc.and($field)")
-      val schemaTree = q"io.github.methrat0n.restruct.schema.Schema($composeFields)"
-      c.Expr[Schema[T]](c.untypecheck(schemaTree))
-    }
-    else if (isCoproduct(tag.tpe.typeSymbol)) {
-      val schemas = tag.tpe.typeSymbol.asClass.knownDirectSubclasses.map(childClass => inferSchema(childClass.asType.toType))
-      val composeFields = schemas.tail.foldLeft(schemas.head)((acc, field) => q"$acc.or($field)")
-      val schemaTree = q"io.github.methrat0n.restruct.schema.StrictSchema($composeFields)"
-      c.Expr[Schema[T]](c.untypecheck(schemaTree))
-    }
-    else {
-      c.abort(
-        c.enclosingPosition,
-        s"Type '${tag.tpe.typeSymbol.name}' must either be a Product or a Coproduct"
-      )
-    }
-  }
-
-}*/
