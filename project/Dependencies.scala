@@ -27,6 +27,11 @@ object Dependencies {
     val play = "com.typesafe.play" %% "play" % version
   }
 
+  object anorm {
+    val version = "2.6.10"
+    val anorm = "org.playframework.anorm" %% "anorm" % version
+  }
+
   object restruct {
     val version = "0.1.0"
     val reads = "io.github.methrat0n" %% "restruct-play-json-reads" % version

@@ -39,6 +39,13 @@ lazy val enumeratum = (project in file("./enumeratum"))
   .settings(libraryDependencies ++= enumeratumDependencies)
   .settings(name := "restruct-enumeratum")
   .dependsOn(core)
+
+lazy val anorm = (project in file("./anorm"))
+  .settings(commonSettings: _*)
+  .settings(libraryDependencies ++= anormDependencies)
+  .settings(name := "restruct-anorm")
+  .dependsOn(core)
+
 /*
 lazy val bson = (project in file("./bson"))
   .settings(commonSettings: _*)
@@ -86,6 +93,10 @@ lazy val examples = (project in file("./examples"))
 lazy val commonSettings =
   Settings.scala.commonSettings ++
   scalariformCommonSettings
+
+lazy val anormDependencies = Seq(
+  Dependencies.anorm.anorm
+)
 
 lazy val playJsonDependencies = Seq(
   Dependencies.json.play
